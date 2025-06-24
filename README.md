@@ -255,7 +255,7 @@ poetry --version
 #### 3. Clone and Setup Project
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/dronesphere.git
+git clone https://github.com/alireza787b/dronesphere.git
 cd dronesphere
 
 # Create and activate virtual environment
