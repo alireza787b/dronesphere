@@ -1,0 +1,8 @@
+#!/bin/bash
+# Auto-stage files fixed by pre-commit hooks
+
+# Check if there are modified files after pre-commit
+if [[ -n $(git diff --name-only --cached) ]]; then
+    # Stage any files that were fixed
+    git add -u
+fi

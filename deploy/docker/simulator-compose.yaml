@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # PX4 SITL (Software In The Loop) Simulator
+  # This simulates a complete drone with physics
+  px4-sitl:
+    image: px4io/px4-dev-simulation-focal:latest
+    container_name: dronesphere-px4-sitl
+    # Privileged needed for simulation
+    privileged: true
+    stdin_open: true
+    tty: true
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - QT_X11_NO_MITSHM=1
+      - HEADLESS=1  # Run without GUI
+      - PX4_HOME_LAT=37.7749    # San Francisco coordinates
+      - PX4_HOME_LON=-122.4194
+      - PX4_HOME_ALT=10
+    volumes:
+      # X11 socket for GUI (if not headless)
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # Shared memory for performance
+      - /dev/shm:/dev/shm
+    ports:
+      # MAVLink communication ports
+      - "14540:14540/udp"  # MAVLink main
+      - "14550:14550/udp"  # MAVLink ground station
+      - "14560:14560/udp"  # MAVLink onboard
+      - "14570:14570/udp"  # MAVLink onboard (additional)
+      # Simulation ports
+      - "8554:8554"        # RTSP video streaming
+      - "50051-50055:50051-50055"  # gRPC ports
+    command: >
+      bash -c "cd /src/firmware &&
+               HEADLESS=1 make px4_sitl_default gazebo-classic_iris"
+    networks:
+      - dronesphere-network
+    healthcheck:
+      test: ["CMD", "bash", "-c", "ps aux | grep px4 | grep -v grep"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # MAVSDK Server - Provides gRPC interface to PX4
+  mavsdk-server:
+    image: mavsdk/mavsdk-server:latest
+    container_name: dronesphere-mavsdk-server
+    restart: unless-stopped
+    ports:
+      - "50040:50040"  # gRPC port
+    # Wait for PX4 to be ready
+    depends_on:
+      px4-sitl:
+        condition: service_started
+    # Connect to PX4 via MAVLink
+    command: -p 50040 udp://:14540
+    networks:
+      - dronesphere-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "50040"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+# Use the existing network from main compose
+networks:
+  dronesphere-network:
+    external: true
