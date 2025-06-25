@@ -132,7 +132,7 @@ async def main():
     if all(results):
         print(f"{GREEN}🎉 All services are working correctly!{RESET}")
         print("\nYou can access:")
-        print("  • Database UI: http://localhost:8082")
+        print("  • Database UI: http://localhost:8080")
         print("    - System: PostgreSQL")
         print("    - Server: postgres")
         print("    - Username: dronesphere")
