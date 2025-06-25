@@ -15,7 +15,7 @@ RESET = "\033[0m"
 
 
 async def test_postgresql():
-    """Test PostgreSQL connection"""
+    """Test PostgreSQL connection."""
     print(f"{YELLOW}Testing PostgreSQL...{RESET}")
     try:
         import asyncpg
@@ -40,13 +40,17 @@ async def test_postgresql():
 
         await conn.close()
         return True
+    except ImportError:
+        print(f"{RED}❌ PostgreSQL failed: asyncpg not installed{RESET}")
+        print(f"   Run: poetry install")
+        return False
     except Exception as e:
         print(f"{RED}❌ PostgreSQL failed: {e}{RESET}")
         return False
 
 
 async def test_redis():
-    """Test Redis connection"""
+    """Test Redis connection."""
     print(f"\n{YELLOW}Testing Redis...{RESET}")
     try:
         import redis.asyncio as redis
@@ -67,15 +71,20 @@ async def test_redis():
         info = await r.info("server")
         print(f"   Version: {info['redis_version']}")
 
-        await r.close()
+        # Use aclose() to avoid deprecation warning
+        await r.aclose()
         return True
+    except ImportError:
+        print(f"{RED}❌ Redis failed: redis not installed{RESET}")
+        print(f"   Run: poetry install")
+        return False
     except Exception as e:
         print(f"{RED}❌ Redis failed: {e}{RESET}")
         return False
 
 
 async def test_rabbitmq():
-    """Test RabbitMQ connection"""
+    """Test RabbitMQ connection."""
     print(f"\n{YELLOW}Testing RabbitMQ...{RESET}")
     try:
         import aio_pika
@@ -97,13 +106,17 @@ async def test_rabbitmq():
 
         await connection.close()
         return True
+    except ImportError:
+        print(f"{RED}❌ RabbitMQ failed: aio-pika not installed{RESET}")
+        print(f"   Run: poetry install")
+        return False
     except Exception as e:
         print(f"{RED}❌ RabbitMQ failed: {e}{RESET}")
         return False
 
 
 async def main():
-    """Run all tests"""
+    """Run all tests."""
     print(f"\n{YELLOW}🔍 DroneSphere Environment Test{RESET}")
     print("=" * 50)
 
@@ -129,7 +142,11 @@ async def main():
         print("    - Password: dronesphere_pass_dev")
         return 0
     else:
-        print(f"{RED}❌ Some services failed. Check Docker logs:{RESET}")
+        print(f"{RED}❌ Some services failed.{RESET}")
+        if any("not installed" in str(r) for r in results):
+            print(f"\n{YELLOW}First, ensure all dependencies are installed:{RESET}")
+            print("  poetry install")
+        print(f"\n{YELLOW}If Docker services are not running:{RESET}")
         print("  make docker-logs")
         return 1
 
@@ -140,8 +157,6 @@ if __name__ == "__main__":
         print(f"{RED}⚠️  Not in virtual environment! Run:{RESET}")
         print("  source venv/bin/activate")
         sys.exit(1)
-
-    # Check if required packages are installed
 
     # Run tests
     exit_code = asyncio.run(main())
