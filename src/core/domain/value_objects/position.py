@@ -15,10 +15,10 @@ class Position(ValueObject):
     Coordinates use WGS84 (GPS standard).
     """
     
-    latitude: float  # Degrees (-90 to 90)
-    longitude: float  # Degrees (-180 to 180)
-    altitude: float  # Meters above sea level
-    altitude_relative: Optional[float] = None  # Meters above takeoff point
+    latitude: float
+    longitude: float
+    altitude: float
+    altitude_relative: Optional[float] = None
     
     def __post_init__(self) -> None:
         """Validate position values."""
