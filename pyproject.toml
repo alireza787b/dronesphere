@@ -2,11 +2,11 @@
 name = "dronesphere"
 version = "0.1.0"
 description = "AI-powered drone control system with natural language interface"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Alireza Ghaderi <p30planets@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-homepage = "https://github.com/yourusername/dronesphere"
-repository = "https://github.com/yourusername/dronesphere"
+homepage = "https://github.com/alireza787b/dronesphere"
+repository = "https://github.com/alireza787b/dronesphere"
 documentation = "https://dronesphere.readthedocs.io"
 keywords = ["drone", "uav", "ai", "mavlink", "autonomous"]
 classifiers = [
@@ -50,12 +50,17 @@ rich = "^13.7.0"
 prometheus-client = "^0.19.0"
 mkdocs = "^1.5.3"
 mkdocs-material = "^9.5.3"
+spacy = "^3.7.2"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.12.1"
 isort = "^5.13.2"
 flake8 = "^6.1.0"
+flake8-bugbear = "^23.12.2"
+flake8-comprehensions = "^3.14.0"
+flake8-simplify = "^0.21.0"
 mypy = "^1.8.0"
+bandit = "^1.7.6"
 pre-commit = "^3.6.0"
 faker = "^22.0.0"
 factory-boy = "^3.3.0"
@@ -79,9 +84,35 @@ line_length = 88
 python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
 
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-ra -q --strict-markers --cov=src --cov-report=term-missing"
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["src"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
+
+[tool.bandit]
+exclude_dirs = ["tests", "venv"]
+skips = ["B101"]  # Skip assert_used test
