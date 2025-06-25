@@ -299,7 +299,7 @@ API_WORKERS=1
 
 # Security
 SECRET_KEY=your-secret-key-change-in-production
-CORS_ORIGINS=http://localhost:3000,http://localhost:8080
+CORS_ORIGINS=http://localhost:3000,http://localhost:8082
 
 # Database
 DATABASE_URL=postgresql+asyncpg://dronesphere:dronesphere_pass_dev@localhost:5432/dronesphere
@@ -418,7 +418,7 @@ make pi-restart
 ### Development Services
 - **FastAPI Server**: http://localhost:8000
 - **API Documentation**: http://localhost:8000/docs
-- **Database Admin**: http://localhost:8080
+- **Database Admin**: http://localhost:8082
   - System: PostgreSQL
   - Server: postgres
   - Username: dronesphere
