@@ -137,9 +137,11 @@ dronesphere/
 # Update system
 sudo apt update && sudo apt upgrade -y
 
-# Install Python and development tools
-sudo apt install -y python3.10 python3.10-venv python3.10-dev python3-pip
-sudo apt install -y build-essential git curl wget
+# Install Python 3.10 and development tools
+sudo apt install -y python3.12 python3.12-venv python3.12-dev python3-pip
+
+# Install build essentials
+sudo apt install -y build-essential git curl wget net-tools tmux
 
 # Install PostgreSQL client libraries (for asyncpg)
 sudo apt install -y libpq-dev
