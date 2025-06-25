@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
-from src.core.domain.value_objects.position import Position
 from src.shared.domain.value_object import ValueObject
 
 
@@ -98,7 +97,7 @@ class LandCommand(DroneCommand):
 class GoToCommand(DroneCommand):
     """Command to fly to specific position."""
     
-    target_position: Position
+    target_position: "Position"  # Forward reference
     speed_m_s: Optional[float] = None
     command_type: CommandType = CommandType.GO_TO
     
@@ -192,7 +191,7 @@ class EmergencyStopCommand(DroneCommand):
 class OrbitCommand(DroneCommand):
     """Command to orbit around a point."""
     
-    center: Position
+    center: "Position"  # Forward reference
     radius_m: float
     velocity_m_s: float = 5.0
     clockwise: bool = True
@@ -216,3 +215,11 @@ class OrbitCommand(DroneCommand):
             f"Orbit {direction} around {self.center} "
             f"with radius {self.radius_m}m at {self.velocity_m_s}m/s{orbits_info}"
         )
+
+
+# Import Position at the end to resolve forward references
+from src.core.domain.value_objects.position import Position
+
+# Update forward references
+GoToCommand.__annotations__["target_position"] = Position
+OrbitCommand.__annotations__["center"] = Position

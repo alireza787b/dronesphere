@@ -2,7 +2,7 @@
 # These run automatically before each commit
 
 default_language_version:
-  python: python3.10
+  python: python3.12
 
 # Automatically stage files that are fixed
 default_stages: [commit]
