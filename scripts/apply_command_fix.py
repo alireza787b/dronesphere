@@ -1,4 +1,10 @@
-"""Command value objects for drone control."""
+#!/usr/bin/env python3
+"""Apply the simplified command.py fix."""
+
+from pathlib import Path
+
+# Simplified command.py content that avoids dataclass inheritance issues
+SIMPLE_COMMAND_PY = '''"""Command value objects for drone control."""
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -264,3 +270,22 @@ from src.core.domain.value_objects.position import Position
 # Update forward references
 GoToCommand.__annotations__["target_position"] = Position
 OrbitCommand.__annotations__["center"] = Position
+'''
+
+def main():
+    """Apply the simplified fix."""
+    print("🛠️  Applying simplified command.py fix...")
+    
+    # Write the fixed content
+    command_file = Path("src/core/domain/value_objects/command.py")
+    command_file.write_text(SIMPLE_COMMAND_PY)
+    
+    print("✅ Applied simplified command.py successfully!")
+    print("\nThe fix:")
+    print("- DroneCommand is now a regular abstract class (not a dataclass)")
+    print("- command_type and priority are properties instead of fields")
+    print("- This avoids the dataclass field ordering issue entirely")
+    print("\nNow run: python scripts/test_domain_models.py")
+
+if __name__ == "__main__":
+    main()
