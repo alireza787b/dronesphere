@@ -141,8 +141,8 @@ class Drone(Entity):
         
         self.add_event(
             DroneConnectedEvent(
-                aggregate_id=self.id,
                 position=initial_position,
+                aggregate_id=self.id,
             )
         )
     
@@ -158,8 +158,8 @@ class Drone(Entity):
         
         self.add_event(
             DroneDisconnectedEvent(
+                last_state=str(old_state),
                 aggregate_id=self.id,
-                last_state=old_state,
             )
         )
     
@@ -178,8 +178,8 @@ class Drone(Entity):
         
         self.add_event(
             DroneArmedEvent(
-                aggregate_id=self.id,
                 home_position=self._home_position,
+                aggregate_id=self.id,
             )
         )
     
@@ -210,8 +210,8 @@ class Drone(Entity):
         
         self.add_event(
             DroneTookOffEvent(
-                aggregate_id=self.id,
                 target_altitude=target_altitude,
+                aggregate_id=self.id,
             )
         )
     
@@ -238,9 +238,9 @@ class Drone(Entity):
             self._state = DroneState.HOVERING
             self.add_event(
                 DroneStateChangedEvent(
+                    old_state=str(DroneState.TAKING_OFF),
+                    new_state=str(DroneState.HOVERING),
                     aggregate_id=self.id,
-                    old_state=DroneState.TAKING_OFF,
-                    new_state=DroneState.HOVERING,
                 )
             )
         elif self._state == DroneState.LANDING and new_position.altitude < 0.5:
@@ -248,10 +248,10 @@ class Drone(Entity):
             self._is_armed = False
             self.add_event(
                 DroneStateChangedEvent(
-                    aggregate_id=self.id,
-                    old_state=DroneState.LANDING,
-                    new_state=DroneState.LANDED,
-                )
+                old_state=str(DroneState.LANDING),
+                new_state=str(DroneState.LANDED),
+                aggregate_id=self.id,
+            )
             )
         
         # Calculate distance traveled
@@ -294,9 +294,9 @@ class Drone(Entity):
         
         self.add_event(
             DroneStateChangedEvent(
+                old_state=str(old_state),
+                new_state=str(DroneState.EMERGENCY),
                 aggregate_id=self.id,
-                old_state=old_state,
-                new_state=DroneState.EMERGENCY,
             )
         )
     
