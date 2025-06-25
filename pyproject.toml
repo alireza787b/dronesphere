@@ -1,13 +1,13 @@
-[tool.poetry]
+[project]
 name = "dronesphere"
 version = "0.1.0"
 description = "AI-powered drone control system with natural language interface"
-authors = ["Alireza Ghaderi <p30planets@gmail.com>"]
-license = "MIT"
+authors = [
+    {name = "Alireza Ghaderi", email = "p30planets@gmail.com"}
+]
+license = {text = "MIT"}
 readme = "README.md"
-homepage = "https://github.com/alireza787b/dronesphere"
-repository = "https://github.com/alireza787b/dronesphere"
-documentation = "https://dronesphere.readthedocs.io"
+requires-python = ">=3.10"
 keywords = ["drone", "uav", "ai", "mavlink", "autonomous"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -19,58 +19,83 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 
-[tool.poetry.dependencies]
-python = "^3.10"
-pydantic = "^2.5.0"
-pydantic-settings = "^2.1.0"
-fastapi = "^0.108.0"
-uvicorn = {extras = ["standard"], version = "^0.25.0"}
-aiofiles = "^23.2.1"
-httpx = "^0.25.2"
-mavsdk = "^2.0.1"
-pymavlink = "^2.4.41"
-ollama = "^0.1.7"
-openai = "^1.6.1"
-anthropic = "^0.8.1"
-sqlalchemy = "^2.0.23"
-alembic = "^1.13.1"
-asyncpg = "^0.29.0"
-redis = "^5.0.1"
-aio-pika = "^9.3.1"
-pyyaml = "^6.0.1"
-orjson = "^3.9.10"
-loguru = "^0.7.2"
-pytest = "^7.4.3"
-pytest-asyncio = "^0.21.1"
-pytest-cov = "^4.1.0"
-pytest-mock = "^3.12.0"
-jsonschema = "^4.20.0"
-typer = "^0.9.0"
-rich = "^13.7.0"
-prometheus-client = "^0.19.0"
-mkdocs = "^1.5.3"
-mkdocs-material = "^9.5.3"
-spacy = "^3.7.2"
+dependencies = [
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "fastapi>=0.108.0",
+    "uvicorn[standard]>=0.25.0",
+    "aiofiles>=23.2.1",
+    "httpx>=0.25.2",
+    "mavsdk>=2.0.1",
+    "pymavlink>=2.4.41",
+    "ollama>=0.1.7",
+    "openai>=1.6.1",
+    "anthropic>=0.8.1",
+    "sqlalchemy>=2.0.23",
+    "alembic>=1.13.1",
+    "asyncpg>=0.29.0",
+    "redis>=5.0.1",
+    "aio-pika>=9.3.1",
+    "pyyaml>=6.0.1",
+    "orjson>=3.9.10",
+    "loguru>=0.7.2",
+    "pytest>=7.4.3",
+    "pytest-asyncio>=0.21.1",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
+    "jsonschema>=4.20.0",
+    "typer>=0.9.0",
+    "rich>=13.7.0",
+    "prometheus-client>=0.19.0",
+    "mkdocs>=1.5.3",
+    "mkdocs-material>=9.5.3",
+    "spacy>=3.7.2",
+]
 
-[tool.poetry.group.dev.dependencies]
-black = "^23.12.1"
-isort = "^5.13.2"
-flake8 = "^6.1.0"
-flake8-bugbear = "^23.12.2"
-flake8-comprehensions = "^3.14.0"
-flake8-simplify = "^0.21.0"
-mypy = "^1.8.0"
-bandit = "^1.7.6"
-pre-commit = "^3.6.0"
-faker = "^22.0.0"
-factory-boy = "^3.3.0"
-testcontainers = "^3.7.1"
-ipython = "^8.19.0"
-ipdb = "^0.13.13"
+[project.optional-dependencies]
+dev = [
+    "black>=23.12.1",
+    "isort>=5.13.2",
+    "flake8>=6.1.0",
+    "flake8-bugbear>=23.12.2",
+    "flake8-comprehensions>=3.14.0",
+    "flake8-simplify>=0.21.0",
+    "mypy>=1.8.0",
+    "bandit>=1.7.6",
+    "pre-commit>=3.6.0",
+    "faker>=22.0.0",
+    "factory-boy>=3.3.0",
+    "testcontainers>=3.7.1",
+    "ipython>=8.19.0",
+    "ipdb>=0.13.13",
+]
+
+[project.urls]
+Homepage = "https://github.com/alireza787b/dronesphere"
+Repository = "https://github.com/alireza787b/dronesphere"
+Documentation = "https://dronesphere.readthedocs.io"
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = [
+    "black>=23.12.1",
+    "isort>=5.13.2",
+    "flake8>=6.1.0",
+    "flake8-bugbear>=23.12.2",
+    "flake8-comprehensions>=3.14.0",
+    "flake8-simplify>=0.21.0",
+    "mypy>=1.8.0",
+    "bandit>=1.7.6",
+    "pre-commit>=3.6.0",
+    "faker>=22.0.0",
+    "factory-boy>=3.3.0",
+    "testcontainers>=3.7.1",
+    "ipython>=8.19.0",
+    "ipdb>=0.13.13",
+]
 
 [tool.black]
 line-length = 88

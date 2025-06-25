@@ -3,8 +3,9 @@
 > Natural language drone control through conversational AI with enterprise-grade architecture
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org)
-[![Architecture](https://img.shields.io/badge/architecture-hexagonal-orange)](docs/architecture/decisions/ADR-001-hexagonal-architecture.md)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Package Manager](https://img.shields.io/badge/package_manager-uv-orange)](https://github.com/astral-sh/uv)
+[![Architecture](https://img.shields.io/badge/architecture-hexagonal-green)](docs/architecture/decisions/ADR-001-hexagonal-architecture.md)
+[![License](https://img.shields.io/badge/license-MIT-purple)](LICENSE)
 
 ## 🎯 Project Vision
 
@@ -20,261 +21,268 @@ DroneSphere is an open-source platform that bridges natural language and drone c
 
 ## 📊 Current Development Status
 
-### 🚀 Current Step: 2 of 25 - Development Environment Configuration (IN PROGRESS)
+### 🚀 Current Step: 4 of 25 - Natural Language Processing (READY TO START)
 
-#### ✅ Completed in Step 1:
-- Project structure following hexagonal architecture
-- Python environment with Poetry dependency management
-- Complete project file structure with all directories
-- Development tools: Black, isort, flake8, mypy, pytest
-- Pre-commit hooks configuration
-- Comprehensive .gitignore
-- Makefile with 20+ automation commands
-- Environment configuration system (.env files)
-- Architecture Decision Records (ADRs)
-- Basic test structure
+#### ✅ Completed Steps:
+1. **Step 1**: Project structure with hexagonal architecture
+2. **Step 2**: Development environment with Docker services
+3. **Step 3**: Core domain models (entities, value objects, events)
+   - Migrated from Poetry to UV for faster dependency management
+   - Implemented 3-component architecture
 
-#### 🔧 In Progress (Step 2):
-- Docker development environment setup
-- PostgreSQL with PostGIS for geospatial data
-- Redis for caching
-- RabbitMQ for message queuing
-- PX4 SITL simulator configuration
-- MAVSDK server setup
-- Development environment testing scripts
+#### 🔧 Next Step (Step 4):
+- Implement NLP service using spaCy
+- Create natural language to command parser
+- Integrate intent classification
+- Build parameter extraction system
 
 ## 🏗️ Architecture Overview
 
-### Hexagonal Architecture (Ports & Adapters)
+### Three-Component System Architecture
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        APPLICATION CORE                       │
+│                     1. FRONTEND (Future)                      │
+│                   React/Next.js Web App                       │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ REST/WebSocket
+┌───────────────────────────┴─────────────────────────────────┐
+│                     2. SERVER (Current Focus)                 │
 │  ┌─────────────┐  ┌──────────────┐  ┌──────────────────┐   │
-│  │   Domain    │  │   Use Cases  │  │  Domain Services │   │
-│  │   Models    │  │  (Commands)  │  │   (Business      │   │
-│  │             │  │              │  │    Logic)        │   │
+│  │   FastAPI   │  │     NLP      │  │  Domain Logic    │   │
+│  │   REST/WS   │  │   Service    │  │  & Use Cases     │   │
+│  └─────────────┘  └──────────────┘  └──────────────────┘   │
+│  ┌─────────────┐  ┌──────────────┐  ┌──────────────────┐   │
+│  │  Database   │  │    Redis     │  │   RabbitMQ       │   │
+│  │ PostgreSQL  │  │   Cache      │  │  Message Queue   │   │
+│  └─────────────┘  └──────────────┘  └──────────────────┘   │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ Commands/Telemetry
+┌───────────────────────────┴─────────────────────────────────┐
+│              3. DRONE CONTROLLER (Raspberry Pi)               │
+│  ┌─────────────┐  ┌──────────────┐  ┌──────────────────┐   │
+│  │   MAVSDK    │  │   Command    │  │    Safety        │   │
+│  │  Adapter    │  │   Receiver   │  │    System        │   │
 │  └─────────────┘  └──────────────┘  └──────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
-                              │
-┌─────────────────────────────┴────────────────────────────────┐
-│                         ADAPTERS                              │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    │
-│  │   REST   │  │WebSocket │  │  MAVSDK  │  │    AI    │    │
-│  │   API    │  │   API    │  │ Adapter  │  │ Adapters │    │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘    │
-└───────────────────────────────────────────────────────────────┘
+                            │ MAVLink
+                     ┌──────┴──────┐
+                     │   Pixhawk   │
+                     │  Autopilot  │
+                     └─────────────┘
 ```
 
-## 📁 Complete Project Structure
+## 📁 Project Structure
 
 ```
 dronesphere/
-├── src/                           # All source code
-│   ├── core/                      # Business logic (no external dependencies)
-│   │   ├── domain/                # Core business entities and rules
-│   │   │   ├── entities/          # Drone, Mission, Command objects
-│   │   │   │   └── __init__.py
-│   │   │   ├── value_objects/     # Position, Telemetry, CommandParams
-│   │   │   │   └── __init__.py
-│   │   │   ├── events/            # Domain events
-│   │   │   │   └── __init__.py
-│   │   │   ├── exceptions/        # Domain-specific exceptions
-│   │   │   │   └── __init__.py
-│   │   │   └── __init__.py
-│   │   ├── application/           # Use cases and orchestration
-│   │   │   ├── commands/          # Command handlers
-│   │   │   │   └── __init__.py
-│   │   │   ├── queries/           # Query handlers
-│   │   │   │   └── __init__.py
-│   │   │   ├── services/          # Domain services
-│   │   │   │   └── __init__.py
-│   │   │   └── __init__.py
-│   │   └── ports/                 # Interfaces for external systems
-│   │       ├── input/             # How external systems call us
-│   │       │   └── __init__.py
-│   │       ├── output/            # How we call external systems
-│   │       │   └── __init__.py
-│   │       └── __init__.py
-│   │
-│   ├── adapters/                  # Implementations of ports
-│   │   ├── input/                 # Incoming adapters
-│   │   │   ├── api/               # REST and WebSocket APIs
-│   │   │   │   ├── rest/          # FastAPI REST endpoints
-│   │   │   │   │   └── __init__.py
-│   │   │   │   ├── websocket/     # Real-time WebSocket
-│   │   │   │   │   └── __init__.py
-│   │   │   │   └── __init__.py
-│   │   │   ├── cli/               # Command-line interface
-│   │   │   │   └── __init__.py
-│   │   │   └── __init__.py
-│   │   ├── output/                # Outgoing adapters
-│   │   │   ├── drone/             # Drone control adapters
-│   │   │   │   ├── mavsdk/        # MAVSDK implementation
-│   │   │   │   │   └── __init__.py
-│   │   │   │   ├── simulator/     # Simulator adapters
-│   │   │   │   │   └── __init__.py
-│   │   │   │   └── __init__.py
-│   │   │   ├── ai/                # AI/LLM adapters
-│   │   │   │   ├── ollama/        # Local Ollama
-│   │   │   │   │   └── __init__.py
-│   │   │   │   ├── openai/        # OpenAI API
-│   │   │   │   │   └── __init__.py
-│   │   │   │   └── __init__.py
-│   │   │   ├── persistence/       # Database adapters
-│   │   │   │   ├── postgresql/    # PostgreSQL adapter
-│   │   │   │   │   └── __init__.py
-│   │   │   │   ├── redis/         # Redis adapter
-│   │   │   │   │   └── __init__.py
-│   │   │   │   └── __init__.py
-│   │   │   └── __init__.py
-│   │   └── __init__.py
-│   │
-│   ├── shared/                    # Shared utilities
-│   │   ├── constants/             # System-wide constants
-│   │   │   └── __init__.py
-│   │   ├── utils/                 # Utility functions
-│   │   │   └── __init__.py
-│   │   └── __init__.py
-│   └── __init__.py
+├── server/                        # Main server application
+│   ├── src/
+│   │   ├── core/                  # Business logic (no external dependencies)
+│   │   │   ├── domain/            # Entities, value objects, events
+│   │   │   ├── application/       # Use cases and services
+│   │   │   └── ports/             # Interface definitions
+│   │   ├── adapters/              # Interface implementations
+│   │   │   ├── input/             # REST API, WebSocket, CLI
+│   │   │   └── output/            # Database, AI, external services
+│   │   └── shared/                # Shared utilities
+│   ├── tests/                     # Test suite
+│   ├── scripts/                   # Utility scripts
+│   └── pyproject.toml             # UV/Python configuration
 │
-├── resources/                     # Configuration and static files
-│   ├── commands/                  # Command definitions (YAML)
-│   │   ├── core/                  # Core commands
-│   │   └── plugins/               # Plugin commands
-│   ├── prompts/                   # AI prompt templates
-│   │   ├── intent_classification/ # Intent detection prompts
-│   │   ├── parameter_extraction/  # Parameter extraction prompts
-│   │   └── safety_validation/     # Safety check prompts
-│   └── configs/                   # System configurations
-│       ├── drone_profiles/        # Drone configuration profiles
-│       └── safety_rules/          # Safety constraint definitions
+├── drone_controller/              # Raspberry Pi drone controller
+│   ├── src/
+│   │   ├── mavsdk_adapter/       # MAVSDK integration
+│   │   ├── command_receiver/      # Receives commands from server
+│   │   ├── telemetry/            # Sends telemetry to server
+│   │   └── safety/               # Local safety checks
+│   ├── tests/
+│   ├── requirements.txt          # Simple requirements for Pi
+│   └── main.py                   # Entry point
 │
-├── plugins/                       # Plugin system
-│   ├── examples/                  # Example plugins
-│   └── __init__.py
+├── frontend/                      # React/Next.js web app (future)
+│   ├── src/
+│   ├── public/
+│   └── package.json
 │
-├── tests/                         # Test suite
-│   ├── unit/                      # Unit tests
-│   │   ├── core/                  # Core logic tests
-│   │   └── adapters/              # Adapter tests
-│   ├── integration/               # Integration tests
-│   ├── e2e/                       # End-to-end tests
-│   ├── fixtures/                  # Test fixtures
-│   └── conftest.py                # Pytest configuration
+├── shared/                        # Shared contracts/types
+│   └── proto/                     # Protocol definitions
 │
 ├── deploy/                        # Deployment configurations
 │   ├── docker/                    # Docker files
-│   │   ├── config/                # Docker config files
-│   │   │   └── init-db.sql        # Database initialization
-│   │   ├── docker-compose.yaml    # Main services
-│   │   ├── simulator-compose.yaml # Simulator services
-│   │   ├── Dockerfile.dev         # Development Dockerfile
-│   │   └── .env.docker            # Docker environment vars
-│   ├── kubernetes/                # K8s manifests
-│   └── terraform/                 # Infrastructure as Code
-│
-├── scripts/                       # Utility scripts
-│   ├── setup.sh                   # Initial setup script
-│   └── test_environment.py        # Environment verification
+│   │   ├── docker-compose.yaml    # Development services
+│   │   └── Dockerfile             # Production image
+│   └── kubernetes/                # K8s manifests (future)
 │
 ├── docs/                          # Documentation
 │   ├── architecture/              # Architecture documentation
-│   │   └── decisions/             # ADRs
-│   │       └── ADR-001-hexagonal-architecture.md
 │   ├── api/                       # API documentation
-│   ├── development/               # Developer guides
-│   └── deployment/                # Deployment guides
+│   └── setup/                     # Setup guides
 │
-├── web/                           # Frontend application
-│   ├── src/                       # React source code
-│   ├── public/                    # Static assets
-│   └── package.json               # Node.js dependencies
-│
-├── .github/                       # GitHub specific files
-│   ├── workflows/                 # GitHub Actions
-│   └── ISSUE_TEMPLATE/            # Issue templates
-│
-├── pyproject.toml                 # Poetry configuration
-├── poetry.lock                    # Locked dependencies
+├── .github/                       # GitHub configuration
 ├── Makefile                       # Task automation
-├── .env.example                   # Example environment variables
-├── .env                           # Local environment variables (gitignored)
-├── .gitignore                     # Git ignore rules
-├── .pre-commit-config.yaml        # Pre-commit hooks
 ├── README.md                      # This file
 └── LICENSE                        # MIT License
 ```
 
-## 🚀 Complete Setup Guide for Fresh Ubuntu System
+## 🚀 Quick Start Guide for Ubuntu
 
-### System Requirements
-- Ubuntu 20.04+ (or compatible Linux distribution)
+### Prerequisites
+- Ubuntu 20.04+ (or compatible Linux)
 - Python 3.10 or higher
-- 8GB RAM minimum (16GB recommended for simulation)
+- 8GB RAM minimum (16GB recommended)
 - 20GB free disk space
 
-### Step-by-Step Setup
-
-#### 1. Update System and Install Prerequisites
+### 1. Install System Dependencies
 ```bash
-# Update system packages
+# Update system
 sudo apt update && sudo apt upgrade -y
 
-# Install Python 3.10 and development tools
-sudo apt install -y python3.12 python3.12-venv python3.12-dev python3-pip
+# Install Python and development tools
+sudo apt install -y python3.10 python3.10-venv python3.10-dev python3-pip
+sudo apt install -y build-essential git curl wget
 
-# Install build essentials
-sudo apt install -y build-essential git curl wget net-tools tmux
-
-# Install PostgreSQL client libraries (needed for asyncpg)
+# Install PostgreSQL client libraries (for asyncpg)
 sudo apt install -y libpq-dev
 
 # Install Docker
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 sudo usermod -aG docker $USER
-# Log out and log back in for group changes to take effect
+# Log out and back in for docker group
 
 # Install Docker Compose
 sudo apt install -y docker-compose
 ```
 
-#### 2. Install Poetry
+### 2. Install UV (Ultra-fast Python Package Manager)
 ```bash
-# Install Poetry
-curl -sSL https://install.python-poetry.org | python3 -
-# or install via  sudo apt install poetry
+# Install UV
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Add Poetry to PATH (add this to ~/.bashrc)
+# Add to PATH (add to ~/.bashrc for persistence)
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
 
-# Verify Poetry installation
-poetry --version
+# Verify installation
+uv --version
 ```
 
-#### 3. Clone and Setup Project
+### 3. Clone and Setup Project
 ```bash
-# Clone the repository
+# Clone repository
 git clone https://github.com/alireza787b/dronesphere.git
 cd dronesphere
 
-# Create and activate virtual environment
-python3 -m venv venv
-source venv/bin/activate
+# Create virtual environment with UV
+uv venv
+
+# Activate virtual environment
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install all dependencies
-poetry install
+uv pip install -e ".[dev]"
 
-# Install pre-commit hooks
-poetry run pre-commit install
+# Setup pre-commit hooks
+pre-commit install
 
-# Copy environment variables
+# Copy environment configuration
 cp .env.example .env
 ```
 
-#### 4. Configure Environment Variables
-Edit `.env` file with:
+### 4. Start Docker Services
+```bash
+# Create network
+docker network create dronesphere-network
+
+# Start all services
+docker-compose -f deploy/docker/docker-compose.yaml up -d
+
+# Check service status
+docker-compose -f deploy/docker/docker-compose.yaml ps
+
+# View logs if needed
+docker-compose -f deploy/docker/docker-compose.yaml logs -f
+```
+
+### 5. Verify Installation
+```bash
+# Run domain model tests
+python scripts/test_domain_models.py
+
+# Run all tests
+pytest
+
+# Check code quality
+flake8 src/
+mypy src/
+
+# Test database connection
+python scripts/test_environment.py
+```
+
+## 🛠️ Development with UV
+
+### Common UV Commands
+```bash
+# Install dependencies
+uv pip install -e ".[dev]"
+
+# Add new dependency
+uv pip install package-name
+
+# Update dependencies
+uv pip install --upgrade package-name
+
+# Install from requirements file
+uv pip install -r requirements.txt
+
+# Show installed packages
+uv pip list
+
+# Create new virtual environment
+uv venv
+
+# Run Python scripts
+uv run python script.py
+```
+
+### Makefile Commands
+```bash
+# Development
+make run              # Run the server
+make run-dev          # Run with hot reload
+make test             # Run all tests
+make test-watch       # Run tests in watch mode
+
+# Code Quality
+make format           # Format code with black/isort
+make lint             # Run linters
+make type-check       # Run mypy
+make quality          # Run all quality checks
+
+# Docker
+make docker-up        # Start services
+make docker-down      # Stop services
+make docker-logs      # View logs
+make docker-clean     # Clean up
+
+# Database
+make db-migrate       # Run migrations
+make db-reset         # Reset database
+
+# Documentation
+make docs             # Generate docs
+make docs-serve       # Serve docs locally
+
+# Drone Controller (Raspberry Pi)
+make pi-setup         # Setup Pi environment
+make pi-deploy        # Deploy to Pi
+make pi-logs          # View Pi logs
+```
+
+## 📋 Environment Configuration
+
+Create `.env` file with:
 ```bash
 # Application
 APP_NAME=DroneSphere
@@ -282,7 +290,7 @@ APP_ENV=development
 DEBUG=True
 LOG_LEVEL=DEBUG
 
-# API Configuration
+# Server API
 API_HOST=0.0.0.0
 API_PORT=8000
 API_WORKERS=1
@@ -294,279 +302,240 @@ CORS_ORIGINS=http://localhost:3000,http://localhost:8080
 # Database
 DATABASE_URL=postgresql+asyncpg://dronesphere:dronesphere_pass_dev@localhost:5432/dronesphere
 DATABASE_POOL_SIZE=5
-DATABASE_MAX_OVERFLOW=10
 
 # Redis
 REDIS_URL=redis://localhost:6379/0
-REDIS_MAX_CONNECTIONS=10
 
 # RabbitMQ
-RABBITMQ_URL=amqp://dronesphere:dronesphere_pass_dev@localhost:5672/dronesphere
+RABBITMQ_URL=amqp://dronesphere:dronesphere_pass_dev@localhost:5672/
+
+# NLP Configuration
+SPACY_MODEL=en_core_web_sm
+NLP_CONFIDENCE_THRESHOLD=0.8
+
+# AI/LLM Configuration
+OLLAMA_HOST=http://localhost:11434
+OPENAI_API_KEY=your-key-if-using
+AI_PROVIDER=ollama
 
 # Drone Configuration
 MAVSDK_SERVER_ADDRESS=localhost
 MAVSDK_SERVER_PORT=50040
-DEFAULT_DRONE_ID=1
-
-# AI Configuration
-OLLAMA_HOST=http://localhost:11434
-OPENAI_API_KEY=your-openai-key-if-using
-AI_PROVIDER=ollama  # ollama, openai, or anthropic
-
-# Safety Configuration
 MAX_ALTITUDE_METERS=120
 MAX_DISTANCE_METERS=500
 MIN_BATTERY_PERCENT=20
-ENABLE_GEOFENCING=True
+
+# Drone Controller Connection (WebSocket)
+DRONE_CONTROLLER_WS_URL=ws://localhost:8001/ws
+DRONE_CONTROLLER_API_KEY=your-drone-controller-key
 ```
 
-#### 5. Start Docker Services
+## 🧪 Testing
+
+### Run Tests
 ```bash
-# Create Docker network
-docker network create dronesphere-network
+# All tests
+pytest
 
-# Start all services
-make docker-up
+# With coverage
+pytest --cov=src --cov-report=html
 
-# Wait for services to initialize
-sleep 30
+# Specific test file
+pytest tests/unit/test_drone_entity.py
 
-# Check service status
-make docker-ps
+# Run tests in watch mode
+ptw
 
-# Test the environment
-python scripts/test_environment.py
+# Run only unit tests
+pytest tests/unit/
+
+# Run only integration tests
+pytest tests/integration/
 ```
 
-#### 6. Access Services
-- **Database UI (Adminer)**: http://localhost:8080
+### Test Structure
+```
+tests/
+├── unit/                 # Fast, isolated tests
+│   ├── core/            # Domain logic tests
+│   └── adapters/        # Adapter tests
+├── integration/         # Tests with real dependencies
+├── e2e/                 # End-to-end tests
+└── fixtures/            # Shared test data
+```
+
+## 🚁 Drone Controller Setup (Raspberry Pi)
+
+### Prerequisites for Pi
+- Raspberry Pi 4 (4GB+ RAM recommended)
+- Ubuntu Server 20.04 for Raspberry Pi
+- Python 3.10+
+- Internet connection
+
+### Setup on Raspberry Pi
+```bash
+# On the Raspberry Pi
+cd /home/pi
+git clone https://github.com/alireza787b/dronesphere.git
+cd dronesphere/drone_controller
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your server details
+
+# Run the controller
+python main.py
+```
+
+### Deploy from Development Machine
+```bash
+# Configure Pi connection in .env
+PI_HOST=192.168.1.100
+PI_USER=pi
+PI_PATH=/home/pi/dronesphere
+
+# Deploy to Pi
+make pi-deploy
+
+# View Pi logs
+make pi-logs
+
+# Restart Pi service
+make pi-restart
+```
+
+## 📊 Service Endpoints
+
+### Development Services
+- **FastAPI Server**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/docs
+- **Database Admin**: http://localhost:8080
   - System: PostgreSQL
   - Server: postgres
   - Username: dronesphere
   - Password: dronesphere_pass_dev
-  - Database: dronesphere
-
 - **RabbitMQ Management**: http://localhost:15672
   - Username: dronesphere
   - Password: dronesphere_pass_dev
+- **Redis Commander**: http://localhost:8081
 
-#### 7. Verify Setup
+## 🔧 Troubleshooting
+
+### UV Issues
 ```bash
-# Run all tests
-make test
+# If UV not found
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source ~/.bashrc
 
-# Check code quality
-make lint
+# If permission denied
+chmod +x ~/.local/bin/uv
 
-# Format code
-make format
-
-# See all available commands
-make help
+# Clear UV cache if needed
+uv cache clean
 ```
 
-## 🛠️ Technology Stack Details
-
-### Backend Technologies
-- **Python 3.10+**: Modern Python with type hints
-- **Poetry**: Dependency management and packaging
-- **FastAPI**: High-performance async web framework
-- **SQLAlchemy 2.0**: Async ORM with PostgreSQL
-- **Redis**: In-memory caching and pub/sub
-- **RabbitMQ**: Message broker for async tasks
-- **MAVSDK**: High-level drone control SDK
-- **Pydantic**: Data validation and settings
-- **pytest**: Testing framework with async support
-
-### AI/ML Stack
-- **Ollama**: Local LLM inference
-- **LangChain**: LLM application framework
-- **OpenAI API**: Cloud-based GPT models
-- **Anthropic API**: Claude integration
-- **Transformers**: Hugging Face models
-
-### Infrastructure
-- **PostgreSQL 15**: Main database with PostGIS
-- **Redis 7**: Caching and real-time features
-- **RabbitMQ 3.12**: Message queuing
-- **Docker**: Containerization
-- **Docker Compose**: Local orchestration
-
-### Development Tools
-- **Black**: Code formatting
-- **isort**: Import sorting
-- **flake8**: Linting
-- **mypy**: Type checking
-- **pre-commit**: Git hooks
-- **pytest-cov**: Test coverage
-
-## 🔧 Makefile Commands Reference
-
+### Docker Issues
 ```bash
-# Setup
-make install          # Install all dependencies
-make install-dev      # Install with dev dependencies
+# If services won't start
+docker-compose down -v
+docker system prune -a
+docker-compose up -d
 
-# Development
-make run             # Run the application
-make run-dev         # Run with hot reload
-make shell           # Open Python shell with app context
+# Check logs
+docker-compose logs service-name
 
-# Testing
-make test            # Run all tests
-make test-unit       # Run unit tests only
-make test-integration # Run integration tests
-make test-cov        # Run tests with coverage
-make test-watch      # Run tests in watch mode
-
-# Code Quality
-make format          # Format code with black and isort
-make lint            # Run all linters
-make type-check      # Run mypy type checking
-make security-check  # Run security checks
-
-# Docker
-make docker-up       # Start all services
-make docker-down     # Stop all services
-make docker-logs     # View service logs
-make docker-ps       # List running services
-make docker-clean    # Remove containers and volumes
-
-# Database
-make db-upgrade      # Run database migrations
-make db-downgrade    # Rollback migrations
-make db-reset        # Reset database
-
-# Documentation
-make docs            # Generate documentation
-make docs-serve      # Serve documentation locally
-
-# Cleanup
-make clean           # Remove build artifacts
-make clean-all       # Remove everything including .venv
+# Restart specific service
+docker-compose restart postgres
 ```
 
-## 📋 Current Implementation Details
+### Database Issues
+```bash
+# Reset database
+make db-reset
 
-### What's Been Implemented
+# Manual connection
+psql -h localhost -U dronesphere -d dronesphere
 
-1. **Project Structure**
-   - Complete hexagonal architecture setup
-   - All directories created with `__init__.py` files
-   - Separation of concerns (core, adapters, ports)
+# Check migrations
+alembic history
+alembic current
+```
 
-2. **Development Environment**
-   - Poetry for dependency management
-   - Virtual environment configuration
-   - Environment variables with `.env` files
-   - Git repository with comprehensive `.gitignore`
+## 🔄 Development Workflow
 
-3. **Code Quality Tools**
-   - Black for code formatting
-   - isort for import sorting
-   - flake8 for linting
-   - mypy for type checking
-   - Pre-commit hooks configured
+1. **Start Services**
+   ```bash
+   make docker-up
+   ```
 
-4. **Testing Framework**
-   - pytest setup with async support
-   - Test directory structure
-   - Fixtures configuration
-   - Coverage reporting setup
+2. **Activate Environment**
+   ```bash
+   source .venv/bin/activate
+   ```
 
-5. **Documentation**
-   - Architecture Decision Records (ADRs)
-   - Comprehensive README
-   - Code structure documentation
+3. **Run Tests**
+   ```bash
+   make test
+   ```
 
-6. **Docker Configuration**
-   - PostgreSQL with PostGIS
-   - Redis for caching
-   - RabbitMQ for messaging
-   - Adminer for database UI
-   - Docker Compose for orchestration
-   - Network configuration
+4. **Start Development Server**
+   ```bash
+   make run-dev
+   ```
 
-7. **Automation**
-   - Makefile with 20+ commands
-   - Setup scripts
-   - Environment testing script
+5. **Make Changes**
+   - Write code
+   - Add tests
+   - Run `make quality` before commit
 
-### What's Next (Step 3 onwards)
+6. **Commit Changes**
+   ```bash
+   git add .
+   git commit -m "feat: description"
+   git push
+   ```
 
-1. **Domain Models** (Step 3)
-   - Implement Drone entity
-   - Create Position and Telemetry value objects
-   - Define Command base classes
-   - Create domain events
+## 📝 Next Steps
 
-2. **Basic Testing** (Step 4)
-   - Unit tests for domain models
-   - Integration test setup
-   - Test fixtures for common scenarios
+### Step 4: Natural Language Processing (Current)
+- [ ] Install spaCy models
+- [ ] Implement NLP adapter
+- [ ] Create intent classifier
+- [ ] Build parameter extractor
+- [ ] Add command parser
+- [ ] Write comprehensive tests
 
-3. **CI/CD Pipeline** (Step 5)
-   - GitHub Actions workflow
-   - Automated testing on PR
-   - Code quality checks
-   - Docker image building
+### Step 5: Application Services
+- [ ] Implement use cases
+- [ ] Create command handlers
+- [ ] Add validation layer
+- [ ] Build query services
 
-## 🐛 Known Issues and Solutions
+### Step 6: API Implementation
+- [ ] FastAPI endpoints
+- [ ] WebSocket handlers
+- [ ] Authentication
+- [ ] API documentation
 
-### Docker on WSL Issues
-- Docker Desktop integration with WSL can be problematic
-- Solution: Use native Linux VM or ensure Docker Desktop WSL integration is enabled
+## 🤝 Contributing
 
-### Poetry Virtual Environment
-- Sometimes Poetry creates its own venv
-- Solution: Use `poetry config virtualenvs.in-project true`
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open Pull Request
 
-### Port Conflicts
-- Services might conflict with existing ports
-- Solution: Change ports in `docker-compose.yaml`
+## 📄 License
 
-## 🔄 State Transfer for AI Continuation
-
-### Current State Summary
-- **Project**: DroneSphere - AI-powered drone control
-- **Architecture**: Hexagonal (Ports & Adapters)
-- **Current Step**: 2 of 25 (Development Environment)
-- **Language**: Python 3.10+
-- **Status**: Docker services configured but need testing on fresh Linux
-
-### Completed Tasks
-1. ✅ Complete project structure created
-2. ✅ Poetry and dependencies configured
-3. ✅ Development tools setup (formatters, linters)
-4. ✅ Git repository initialized
-5. ✅ Environment configuration
-6. ✅ Docker services defined
-7. ✅ Test framework prepared
-8. ⏳ Docker services need testing on Linux
-
-### Next Immediate Tasks
-1. Test Docker services on fresh Ubuntu
-2. Verify all services are running
-3. Run environment test script
-4. Begin implementing domain models (Step 3)
-
-### Key Files to Check
-- `/deploy/docker/docker-compose.yaml` - Service definitions
-- `/scripts/test_environment.py` - Environment verification
-- `/Makefile` - All available commands
-- `/.env` - Environment configuration
-- `/pyproject.toml` - Python dependencies
-
-### Important Context
-- Moving from WSL to Ubuntu VM due to Docker issues
-- All code is ready, just needs Docker verification
-- Database includes PostGIS for drone GPS data
-- Using MAVSDK for drone control (will add in Step 7)
-
-## 📝 License
-
-MIT License - see [LICENSE](LICENSE) file for details
+MIT License - see [LICENSE](LICENSE) file
 
 ---
 
-**For AI Assistants**: This project is at Step 2 of 25. The immediate task is to verify Docker services work on Ubuntu and then proceed to Step 3 (Domain Models Implementation). All configuration files are in the repository. The architecture is hexagonal with a focus on safety and extensibility.
+**For AI Assistants**: This project uses UV instead of Poetry, has a 3-component architecture (server, drone_controller, frontend), and is currently at Step 4 (NLP implementation). The domain models are complete and tested. Focus on the server component for now.
