@@ -1,7 +1,7 @@
 """Command value objects for drone control."""
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
 
@@ -66,7 +66,11 @@ class TakeoffCommand(DroneCommand):
     """Command to takeoff to specified altitude."""
     
     target_altitude: float  # meters
-    command_type: CommandType = CommandType.TAKEOFF
+    command_type: CommandType = field(default=CommandType.TAKEOFF, init=False)
+    
+    def __post_init__(self):
+        """Set command type after initialization."""
+        object.__setattr__(self, 'command_type', CommandType.TAKEOFF)
     
     def validate(self) -> None:
         """Validate takeoff parameters."""
@@ -82,7 +86,11 @@ class TakeoffCommand(DroneCommand):
 class LandCommand(DroneCommand):
     """Command to land at current position."""
     
-    command_type: CommandType = CommandType.LAND
+    command_type: CommandType = field(default=CommandType.LAND, init=False)
+    
+    def __post_init__(self):
+        """Set command type after initialization."""
+        object.__setattr__(self, 'command_type', CommandType.LAND)
     
     def validate(self) -> None:
         """No validation needed for land."""
@@ -99,7 +107,11 @@ class GoToCommand(DroneCommand):
     
     target_position: "Position"  # Forward reference
     speed_m_s: Optional[float] = None
-    command_type: CommandType = CommandType.GO_TO
+    command_type: CommandType = field(default=CommandType.GO_TO, init=False)
+    
+    def __post_init__(self):
+        """Set command type after initialization."""
+        object.__setattr__(self, 'command_type', CommandType.GO_TO)
     
     def validate(self) -> None:
         """Validate goto parameters."""
@@ -121,7 +133,11 @@ class MoveCommand(DroneCommand):
     right_m: float = 0.0    # Positive = right, negative = left
     up_m: float = 0.0       # Positive = up, negative = down
     rotate_deg: float = 0.0 # Positive = clockwise, negative = counter-clockwise
-    command_type: CommandType = CommandType.MOVE
+    command_type: CommandType = field(default=CommandType.MOVE, init=False)
+    
+    def __post_init__(self):
+        """Set command type after initialization."""
+        object.__setattr__(self, 'command_type', CommandType.MOVE)
     
     def validate(self) -> None:
         """Validate move parameters."""
@@ -158,8 +174,12 @@ class MoveCommand(DroneCommand):
 class ReturnHomeCommand(DroneCommand):
     """Command to return to home position."""
     
-    command_type: CommandType = CommandType.RETURN_HOME
-    priority: CommandPriority = CommandPriority.HIGH
+    command_type: CommandType = field(default=CommandType.RETURN_HOME, init=False)
+    priority: CommandPriority = field(default=CommandPriority.HIGH)
+    
+    def __post_init__(self):
+        """Set command type after initialization."""
+        object.__setattr__(self, 'command_type', CommandType.RETURN_HOME)
     
     def validate(self) -> None:
         """No validation needed."""
@@ -175,8 +195,12 @@ class EmergencyStopCommand(DroneCommand):
     """Emergency stop command."""
     
     reason: str = "Emergency stop requested"
-    command_type: CommandType = CommandType.EMERGENCY_STOP
-    priority: CommandPriority = CommandPriority.CRITICAL
+    command_type: CommandType = field(default=CommandType.EMERGENCY_STOP, init=False)
+    priority: CommandPriority = field(default=CommandPriority.CRITICAL)
+    
+    def __post_init__(self):
+        """Set command type after initialization."""
+        object.__setattr__(self, 'command_type', CommandType.EMERGENCY_STOP)
     
     def validate(self) -> None:
         """No validation needed for emergency."""
@@ -196,7 +220,11 @@ class OrbitCommand(DroneCommand):
     velocity_m_s: float = 5.0
     clockwise: bool = True
     orbits: Optional[int] = None  # None = continuous
-    command_type: CommandType = CommandType.ORBIT
+    command_type: CommandType = field(default=CommandType.ORBIT, init=False)
+    
+    def __post_init__(self):
+        """Set command type after initialization."""
+        object.__setattr__(self, 'command_type', CommandType.ORBIT)
     
     def validate(self) -> None:
         """Validate orbit parameters."""
