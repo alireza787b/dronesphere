@@ -1,7 +1,7 @@
 """Command value objects for drone control."""
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
@@ -43,12 +43,19 @@ class CommandPriority(int, Enum):
     CRITICAL = 3
 
 
-@dataclass(frozen=True)
 class DroneCommand(ValueObject, ABC):
     """Base class for drone commands."""
     
-    command_type: CommandType
-    priority: CommandPriority = CommandPriority.NORMAL
+    @property
+    @abstractmethod
+    def command_type(self) -> CommandType:
+        """Get command type."""
+        pass
+    
+    @property
+    def priority(self) -> CommandPriority:
+        """Get command priority. Override for different priorities."""
+        return CommandPriority.NORMAL
     
     @abstractmethod
     def validate(self) -> None:
@@ -66,11 +73,11 @@ class TakeoffCommand(DroneCommand):
     """Command to takeoff to specified altitude."""
     
     target_altitude: float  # meters
-    command_type: CommandType = field(default=CommandType.TAKEOFF, init=False)
     
-    def __post_init__(self):
-        """Set command type after initialization."""
-        object.__setattr__(self, 'command_type', CommandType.TAKEOFF)
+    @property
+    def command_type(self) -> CommandType:
+        """Get command type."""
+        return CommandType.TAKEOFF
     
     def validate(self) -> None:
         """Validate takeoff parameters."""
@@ -86,11 +93,10 @@ class TakeoffCommand(DroneCommand):
 class LandCommand(DroneCommand):
     """Command to land at current position."""
     
-    command_type: CommandType = field(default=CommandType.LAND, init=False)
-    
-    def __post_init__(self):
-        """Set command type after initialization."""
-        object.__setattr__(self, 'command_type', CommandType.LAND)
+    @property
+    def command_type(self) -> CommandType:
+        """Get command type."""
+        return CommandType.LAND
     
     def validate(self) -> None:
         """No validation needed for land."""
@@ -107,11 +113,11 @@ class GoToCommand(DroneCommand):
     
     target_position: "Position"  # Forward reference
     speed_m_s: Optional[float] = None
-    command_type: CommandType = field(default=CommandType.GO_TO, init=False)
     
-    def __post_init__(self):
-        """Set command type after initialization."""
-        object.__setattr__(self, 'command_type', CommandType.GO_TO)
+    @property
+    def command_type(self) -> CommandType:
+        """Get command type."""
+        return CommandType.GO_TO
     
     def validate(self) -> None:
         """Validate goto parameters."""
@@ -133,11 +139,11 @@ class MoveCommand(DroneCommand):
     right_m: float = 0.0    # Positive = right, negative = left
     up_m: float = 0.0       # Positive = up, negative = down
     rotate_deg: float = 0.0 # Positive = clockwise, negative = counter-clockwise
-    command_type: CommandType = field(default=CommandType.MOVE, init=False)
     
-    def __post_init__(self):
-        """Set command type after initialization."""
-        object.__setattr__(self, 'command_type', CommandType.MOVE)
+    @property
+    def command_type(self) -> CommandType:
+        """Get command type."""
+        return CommandType.MOVE
     
     def validate(self) -> None:
         """Validate move parameters."""
@@ -174,12 +180,15 @@ class MoveCommand(DroneCommand):
 class ReturnHomeCommand(DroneCommand):
     """Command to return to home position."""
     
-    command_type: CommandType = field(default=CommandType.RETURN_HOME, init=False)
-    priority: CommandPriority = field(default=CommandPriority.HIGH)
+    @property
+    def command_type(self) -> CommandType:
+        """Get command type."""
+        return CommandType.RETURN_HOME
     
-    def __post_init__(self):
-        """Set command type after initialization."""
-        object.__setattr__(self, 'command_type', CommandType.RETURN_HOME)
+    @property
+    def priority(self) -> CommandPriority:
+        """Return home has high priority."""
+        return CommandPriority.HIGH
     
     def validate(self) -> None:
         """No validation needed."""
@@ -195,12 +204,16 @@ class EmergencyStopCommand(DroneCommand):
     """Emergency stop command."""
     
     reason: str = "Emergency stop requested"
-    command_type: CommandType = field(default=CommandType.EMERGENCY_STOP, init=False)
-    priority: CommandPriority = field(default=CommandPriority.CRITICAL)
     
-    def __post_init__(self):
-        """Set command type after initialization."""
-        object.__setattr__(self, 'command_type', CommandType.EMERGENCY_STOP)
+    @property
+    def command_type(self) -> CommandType:
+        """Get command type."""
+        return CommandType.EMERGENCY_STOP
+    
+    @property
+    def priority(self) -> CommandPriority:
+        """Emergency has critical priority."""
+        return CommandPriority.CRITICAL
     
     def validate(self) -> None:
         """No validation needed for emergency."""
@@ -220,11 +233,11 @@ class OrbitCommand(DroneCommand):
     velocity_m_s: float = 5.0
     clockwise: bool = True
     orbits: Optional[int] = None  # None = continuous
-    command_type: CommandType = field(default=CommandType.ORBIT, init=False)
     
-    def __post_init__(self):
-        """Set command type after initialization."""
-        object.__setattr__(self, 'command_type', CommandType.ORBIT)
+    @property
+    def command_type(self) -> CommandType:
+        """Get command type."""
+        return CommandType.ORBIT
     
     def validate(self) -> None:
         """Validate orbit parameters."""
