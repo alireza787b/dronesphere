@@ -79,23 +79,16 @@ Documentation = "https://dronesphere.readthedocs.io"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.uv]
-dev-dependencies = [
-    "black>=23.12.1",
-    "isort>=5.13.2",
-    "flake8>=6.1.0",
-    "flake8-bugbear>=23.12.2",
-    "flake8-comprehensions>=3.14.0",
-    "flake8-simplify>=0.21.0",
-    "mypy>=1.8.0",
-    "bandit>=1.7.6",
-    "pre-commit>=3.6.0",
-    "faker>=22.0.0",
-    "factory-boy>=3.3.0",
-    "testcontainers>=3.7.1",
-    "ipython>=8.19.0",
-    "ipdb>=0.13.13",
-]
+# ========== CRITICAL FIX ==========
+# Explicitly defines package locations for Hatchling
+[tool.hatch.build]
+include = ["server/src/dronesphere"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["server/src"]
+# ==================================
+
+# Removed redundant [tool.uv] section (duplicates dev dependencies)
 
 [tool.black]
 line-length = 88
