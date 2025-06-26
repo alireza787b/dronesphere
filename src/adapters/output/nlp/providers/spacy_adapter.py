@@ -1,5 +1,5 @@
 # src/adapters/output/nlp/providers/spacy_adapter.py
-"""spaCy-based NLP adapter implementation.
+"""spaCy-based NLP adapter implementation with complete command support.
 
 This module implements the NLP port using spaCy for natural language processing.
 It handles intent classification, entity extraction, and command parsing.
@@ -100,6 +100,52 @@ class SpacyNLPAdapter(BaseNLPAdapter):
                 priority=100
             ),
             
+            # Connection commands (not in domain, but we'll handle them)
+            IntentPattern(
+                intent="CONNECT",
+                patterns=[
+                    r"\b(connect|link)\s+(to\s+)?(the\s+)?drone\b",
+                    r"\bdrone\s+connect\b"
+                ],
+                keywords=["connect", "drone"],
+                priority=90
+            ),
+            
+            # Arm/Disarm commands (not in domain, but we'll handle them)
+            IntentPattern(
+                intent="ARM",
+                patterns=[
+                    r"\b(arm|enable)\s+(the\s+)?drone\b",
+                    r"\bdrone\s+arm\b",
+                    r"\b(start|activate)\s+(the\s+)?motors?\b"
+                ],
+                keywords=["arm", "drone", "enable", "motors"],
+                priority=80
+            ),
+            
+            IntentPattern(
+                intent="DISARM",
+                patterns=[
+                    r"\b(disarm|disable)\s+(the\s+)?drone\b",
+                    r"\bdrone\s+disarm\b",
+                    r"\b(stop|deactivate)\s+(the\s+)?motors?\b"
+                ],
+                keywords=["disarm", "drone", "disable"],
+                priority=80
+            ),
+            
+            # Hover command
+            IntentPattern(
+                intent="HOVER",
+                patterns=[
+                    r"\bhover\b",
+                    r"\b(stay|hold|maintain)\s+(in\s+)?(place|position|still)\b",
+                    r"\bstop\s+moving\b"
+                ],
+                keywords=["hover", "stay", "hold", "place", "position"],
+                priority=20
+            ),
+            
             # Takeoff commands
             IntentPattern(
                 intent=CommandType.TAKEOFF,
@@ -140,9 +186,9 @@ class SpacyNLPAdapter(BaseNLPAdapter):
                     r"\b(move|go|fly)\s+(forward|backward|left|right|up|down)\b",
                     r"\b(forward|backward|left|right)\s+\d+",
                     r"\b(ascend|descend|climb|drop)\s+\d+",
-                    r"\b(rotate|turn)\s+\d+"
+                    r"\b(rotate|turn|spin)\s+(clockwise|counter-clockwise|left|right)?\s*\d*"
                 ],
-                keywords=["move", "go", "fly", "forward", "backward", "left", "right", "up", "down", "rotate", "turn"],
+                keywords=["move", "go", "fly", "forward", "backward", "left", "right", "up", "down", "rotate", "turn", "spin"],
                 priority=5
             ),
             
@@ -516,6 +562,20 @@ class SpacyNLPAdapter(BaseNLPAdapter):
                 "Try 'land'"
             ]
         
+        # Handle non-domain commands (connect, arm, hover)
+        if intent.intent in ["CONNECT", "ARM", "DISARM", "HOVER"]:
+            # These aren't in our domain model, so we can't create command objects
+            # But we can provide appropriate feedback
+            if intent.intent == "CONNECT":
+                return None, "Connection is handled automatically. Try 'take off' when ready.", []
+            elif intent.intent == "ARM":
+                return None, "Arming is handled automatically before takeoff.", []
+            elif intent.intent == "DISARM":
+                return None, "Disarming is handled automatically after landing.", []
+            elif intent.intent == "HOVER":
+                # Hover can be implemented as a move command with 0 distance
+                return MoveCommand(forward_m=0, right_m=0, up_m=0, rotate_deg=0), None, []
+        
         # Route to specific command parser
         parsers = {
             CommandType.TAKEOFF: self._parse_takeoff,
@@ -621,6 +681,17 @@ class SpacyNLPAdapter(BaseNLPAdapter):
                     angle = angles[0].value
                 
                 rotate_deg = angle if direction.value == "clockwise" else -angle
+        
+        # Handle simple rotation commands without explicit angle
+        if "rotate" in context.get("normalized_text", "") or "turn" in context.get("normalized_text", ""):
+            if rotate_deg == 0 and angles:
+                rotate_deg = angles[0].value
+                # If direction is specified, apply it
+                for direction in directions:
+                    if direction.value == "left" or direction.value == "counter-clockwise":
+                        rotate_deg = -abs(rotate_deg)
+                    elif direction.value == "right" or direction.value == "clockwise":
+                        rotate_deg = abs(rotate_deg)
         
         # If no movement specified, check for simple direction without distance
         if all(v == 0 for v in [forward_m, right_m, up_m, rotate_deg]) and directions:
@@ -753,7 +824,8 @@ class SpacyNLPAdapter(BaseNLPAdapter):
             CommandType.MOVE: [
                 "move forward 10 meters",
                 "go left 5 meters and up 3 meters",
-                "fly backward 20 feet"
+                "fly backward 20 feet",
+                "rotate clockwise 90 degrees"
             ],
             CommandType.GO_TO: [
                 "go to position 47.3977, 8.5456, 100",
