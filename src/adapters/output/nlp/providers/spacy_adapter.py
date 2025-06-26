@@ -354,7 +354,16 @@ class SpacyNLPAdapter(BaseNLPAdapter):
         if pattern_matches == len(pattern.patterns):
             score = min(score * 1.2, 1.0)
         
+        # Special boost for single-word exact matches (like "hover", "land")
+        if len(tokens) == 1 and tokens[0] in pattern.keywords:
+            score = max(score, 0.7)  # Ensure at least 0.7 confidence for exact single-word matches
+        
+        # Boost for very short commands that match a primary keyword
+        if len(tokens) <= 2 and any(keyword == text.lower().strip() for keyword in pattern.keywords):
+            score = max(score, 0.6)  # Ensure at least 0.6 confidence
+        
         return score
+    
     
     def _extract_entities(self, doc: Doc, intent: str) -> List[EntityExtraction]:
         """Extract entities from the processed document."""
