@@ -240,4 +240,4 @@ if __name__ == "__main__":
         sys.exit(0 if success else 1)
     except KeyboardInterrupt:
         print(f"\n{YELLOW}Verification interrupted{RESET}")
-        sys.exit(1)
+        sys.exit(1) 
