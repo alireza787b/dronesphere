@@ -47,12 +47,23 @@ class MAVSDKAdapter(BaseDroneAdapter):
     via MAVLink protocol.
     """
     
-    def __init__(self):
-        """Initialize MAVSDK adapter."""
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        """Initialize MAVSDK adapter.
+        
+        Args:
+            config: Optional configuration dictionary
+        """
         super().__init__()
         self._drone: Optional[System] = None
         self._telemetry_tasks: Set[asyncio.Task] = set()
         self._offboard_active = False
+        self._config = config or {}
+        
+        # Apply configuration
+        self._connection_timeout = self._config.get('connection_timeout', 30.0)
+        self._max_altitude_override = self._config.get('max_altitude_m')
+        self._max_velocity_override = self._config.get('max_velocity_m_s')
+        self._drone_id = self._config.get('drone_id', 'drone_1')
         
     @property
     def backend_name(self) -> str:

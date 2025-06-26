@@ -10,8 +10,8 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 from pathlib import Path
 
-from pydantic import BaseSettings, Field
-
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 class DroneConnectionConfig(BaseSettings):
     """Configuration for drone connections."""
