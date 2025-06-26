@@ -1,6 +1,6 @@
 #!/bin/bash
 # scripts/setup_nlp.sh
-"""Setup script for NLP service dependencies and verification."""
+# Setup script for NLP service dependencies and verification
 
 set -e  # Exit on error
 
@@ -143,6 +143,10 @@ if [ $? -eq 0 ]; then
     echo -e "\n${GREEN}Optional: Install larger models for better accuracy:${NC}"
     echo "   python -m spacy download en_core_web_md  # Recommended"
     echo "   python -m spacy download en_core_web_lg  # Best accuracy"
+    
+    echo -e "\n${YELLOW}⚠️  Note about confidence scores:${NC}"
+    echo "   The small model (en_core_web_sm) gives lower confidence scores (0.4-0.6)."
+    echo "   This is normal. For production, use en_core_web_md or larger."
 else
     echo -e "\n${RED}❌ Setup failed!${NC}"
     exit 1
