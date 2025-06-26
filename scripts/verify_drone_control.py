@@ -4,7 +4,7 @@
 import asyncio
 import sys
 
-sys.path.insert(0, '.')
+sys.path.insert(0, '..')
 
 from src.adapters.output.drone_control.factory import DroneControlFactory
 from src.core.domain.value_objects.command import (
