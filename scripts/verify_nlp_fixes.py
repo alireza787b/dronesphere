@@ -126,4 +126,4 @@ exit(0 if success else 1)
     return checks_failed == 0
 
 if __name__ == "__main__":
-    sys.exit(0 if main() else 1)
+    sys.exit(0 if main() else 1)    
