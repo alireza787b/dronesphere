@@ -1,7 +1,24 @@
+# agent/requirements.txt
+# Drone agent dependencies
+
+# Core drone control
 mavsdk>=2.0.0
+pymavlink>=2.4.40  # For future support
+
+# Async communication
 websockets>=12.0
 aiohttp>=3.9.0
+asyncio-mqtt>=0.16.1
+
+# Configuration and data
 pyyaml>=6.0
 pydantic>=2.0
 python-dotenv>=1.0.0
+
+# Logging and monitoring
 structlog>=23.0.0
+colorlog>=6.7.0
+
+# Utilities
+tenacity>=8.2.0  # For retry logic
+click>=8.1.0  # For CLI
