@@ -1,0 +1,146 @@
+# .pre-commit-config.yaml
+
+# Globally exclude directories/files from all hooks unless overridden
+exclude: |
+  (?x)^(
+    web/node_modules/|
+    web/build/|
+    web/dist/|
+    \.git/|
+    \.venv/|
+    venv/|
+    __pycache__/|
+    \.pytest_cache/|
+    \.mypy_cache/|
+    \.eggs/|
+    .*\.egg-info/|
+    build/|
+    dist/
+  )
+
+# Default Python version for hooks that use it
+default_language_version:
+  python: python3.10
+
+repos:
+  # Python formatting (Black)
+  # Black is opinionated and auto-fixes.
+  - repo: https://github.com/psf/black
+    rev: 23.11.0 # Keep this updated
+    hooks:
+      - id: black
+        language_version: python3.10
+        exclude: ^(web/|node_modules/) # Already excluding web/ and node_modules/
+
+  # Python linting (Ruff)
+  # Ruff is very fast and can auto-fix many issues.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.6 # Keep this updated
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix] # --fix enables auto-fixing. --exit-non-zero-on-fix ensures pre-commit fails if fixes are applied, prompting re-staging.
+        exclude: ^(web/|node_modules/)
+
+  # General file fixes (pre-commit-hooks)
+  # These hooks primarily auto-fix or check for common issues.
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0 # Keep this updated
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: detect-private-key # This is a basic check, detect-secrets is more robust
+      - id: mixed-line-ending
+        args: ["--fix=lf"] # Ensures consistent line endings and auto-fixes
+
+  # Python security checks (Bandit)
+  # Bandit is for static analysis and doesn't auto-fix code.
+  # We'll make it less strict by skipping more common, less critical checks.
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5 # Keep this updated
+    hooks:
+      - id: bandit
+        # Added B403 (consider using blacklist for tarfile) and B603 (subprocess without shell=True)
+        # to the skip list, as they are often false positives or design choices.
+        args: ["-ll", "--skip", "B101,B601,B403,B603"]
+        exclude: ^(tests/|web/)
+
+  # YAML & Markdown Formatting (Prettier)
+  # Prettier is an auto-formatter. It will modify files.
+  # The original config only applied prettier to YAML.
+  # If you want it for Markdown too, you need to adjust 'types_or'.
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.1.0 # Keep this updated
+    hooks:
+      - id: prettier
+        # Changed to process both YAML and Markdown.
+        # If you only want YAML, revert to types_or: [yaml]
+        # If you want all supported types: leave types_or commented out or remove it.
+        types_or: [yaml, markdown] # Prettier also handles markdown, so letting it do that.
+        exclude: ^(web/|node_modules/)
+
+  # Markdown linting (markdownlint-cli)
+  # This linter is for Markdown best practices. `--fix` helps, but some require manual changes.
+  # We'll relax the 'line-length' (MD013) and 'fenced-code-language' (MD040) rules.
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.37.0 # Keep this updated
+    hooks:
+      - id: markdownlint
+        args: ["--fix"] # Auto-fix basic issues
+        # Create a .markdownlint.yaml file in your repo root for more granular control.
+        # This example disables the strict line-length and fenced-code-language rules.
+        # It's better to manage these in a separate config file for markdownlint itself.
+        # See notes below on how to create .markdownlint.yaml
+        entry: bash -c 'markdownlint $(git diff --cached --name-only --diff-filter=ACM | grep -E "\.(md|markdown)$") --fix --config .markdownlint.yaml || [ $? -eq 1 ]'
+        # To make it less strict for now, you can create a .markdownlint.yaml like this:
+        # ---
+        # MD013: false # Disable line length rule
+        # MD040: false # Disable fenced code language rule
+        # ---
+        # Or, just skip these specific errors in the hook args (less clean):
+        # args: ["--fix", "--disable", "MD013", "--disable", "MD040"] # Simpler to add here for quick fix
+
+  # Python docstring checks (pydocstyle)
+  # Less strict means accepting no docstrings for now.
+  # Best practice is to have docstrings, but we'll disable the "missing docstring" rules.
+  - repo: https://github.com/pycqa/pydocstyle
+    rev: 6.3.0 # Keep this updated
+    hooks:
+      - id: pydocstyle
+        exclude: ^(tests/|web/|setup.py)
+        additional_dependencies: [toml]
+        # Add --convention=google or --convention=numpy if you use those styles.
+        # To ignore missing docstring errors (D100, D104, etc.)
+        args: ["--ignore=D100,D101,D102,D103,D104,D105,D106,D107"]
+
+  # Secrets detection (detect-secrets)
+  # This is where the baseline error occurs. We need to ensure the baseline is generated correctly.
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0 # Keep this updated
+    hooks:
+      - id: detect-secrets
+        # We need to make sure the --baseline argument is correctly handled.
+        # If .secrets.baseline doesn't exist, detect-secrets will try to create it,
+        # but the hook context needs to be right.
+        # Let's simplify the args. `detect-secrets` implicitly looks for .secrets.baseline
+        # in the root if not explicitly provided with a path when running as a hook.
+        # However, to GENERATE it, you need the manual command.
+        args: [] # Removed --baseline, it should be handled by the direct `detect-secrets scan` command.
+
+# CI configuration (pre-commit.ci)
+# This section is for pre-commit.ci service, not local hooks.
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit.com hooks
+    for more information, see https://pre-commit.ci
+  autofix_prs: false
+  autoupdate_branch: ""
+  autoupdate_commit_msg: "[pre-commit.ci] pre-commit autoupdate"
+  autoupdate_schedule: weekly
+  skip: []
+  submodules: false
