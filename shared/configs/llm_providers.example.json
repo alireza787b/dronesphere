@@ -1,0 +1,18 @@
+{
+  "providers": [
+    {
+      "name": "ollama",
+      "type": "local",
+      "endpoint": "http://localhost:11434",
+      "models": ["llama2", "mistral"],
+      "default_model": "llama2"
+    },
+    {
+      "name": "openai",
+      "type": "api",
+      "models": ["gpt-3.5-turbo", "gpt-4"],
+      "api_key_env": "OPENAI_API_KEY" #pragma: allowlist secret
+    }
+  ],
+  "default_provider": "ollama"
+}

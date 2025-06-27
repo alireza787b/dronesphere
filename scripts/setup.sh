@@ -19,7 +19,7 @@ command_exists() {
 echo -e "\n${YELLOW}Checking Python version...${NC}"
 if command_exists python3; then
     PYTHON_VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
-    REQUIRED_VERSION="3.11"
+    REQUIRED_VERSION="3.10"
     if [ "$(printf '%s\n' "$REQUIRED_VERSION" "$PYTHON_VERSION" | sort -V | head -n1)" = "$REQUIRED_VERSION" ]; then
         echo -e "${GREEN}✓ Python $PYTHON_VERSION found${NC}"
     else
