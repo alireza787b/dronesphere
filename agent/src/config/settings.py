@@ -8,7 +8,8 @@ Manages configuration for the drone agent using Pydantic for validation.
 from pathlib import Path
 
 import yaml
-from pydantic import BaseSettings, Field, validator
+from pydantic import Field, validator
+from pydantic_settings import BaseSettings
 
 
 class AgentSettings(BaseSettings):
@@ -23,7 +24,8 @@ class AgentSettings(BaseSettings):
 
     # Server connection
     server_url: str = Field(
-        default="ws://localhost:8000/ws/agent",
+        default="ws://localhost:8001/ws/agent",
+        env="AGENT_SERVER_URL",
         description="WebSocket URL for control server",
     )
     server_reconnect_interval: int = Field(

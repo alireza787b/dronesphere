@@ -2,7 +2,7 @@
 # Default configuration for DroneSphere Agent
 
 # Server connection settings
-server_url: ws://localhost:8000/ws/agent
+server_url: ws://localhost:8001/ws/agent
 server_reconnect_interval: 5
 
 # MAVSDK connection settings

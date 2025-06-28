@@ -1,85 +1,43 @@
 #!/bin/bash
 # scripts/demo.sh
-# Start all DroneSphere services for demo
+# Run complete DroneSphere demo
 
 set -e
 
-# Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-RED='\033[0;31m'
 NC='\033[0m'
 
-echo -e "${GREEN}🚁 Starting DroneSphere Demo...${NC}"
+echo -e "${GREEN}🚁 DroneSphere Demo${NC}"
+echo "===================="
 
-# Load environment variables
-if [ -f .env ]; then
-    export $(cat .env | grep -v '^#' | xargs)
+# Check SITL using a Python script with MAVSDK
+echo -e "${YELLOW}Checking SITL connection using MAVSDK...${NC}"
+if ! ~/dronesphere/.venv/bin/python ~/dronesphere/scripts/check_sitl.py; then
+    echo -e "${YELLOW}⚠️  SITL not detected or not sending MAVLink data.${NC}"
+    echo "Run: docker run --rm -it jonasvautherin/px4-gazebo-headless:latest"
+    exit 1
 fi
 
-# Set default ports if not specified
-WEB_PORT=${WEB_PORT:-3010}
-SERVER_PORT=${SERVER_PORT:-8000}
+# Start services
+echo -e "${GREEN}Starting services...${NC}"
 
-# Check if SITL is running
-if ! nc -z localhost 14540 2>/dev/null; then
-    echo -e "${YELLOW}⚠️  SITL not detected on port 14540${NC}"
-    echo "To start SITL, run:"
-    echo "docker run --rm -it -p 14540:14540/udp jonasvautherin/px4-gazebo-headless:latest"
-    echo ""
-    read -p "Continue anyway? (y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        exit 1
-    fi
-fi
-
-# Function to cleanup on exit
-cleanup() {
-    echo -e "\n${YELLOW}Stopping all services...${NC}"
-    kill $SERVER_PID $AGENT_PID $WEB_PID 2>/dev/null || true
-    exit 0
-}
-
-trap cleanup INT TERM
-
-# Start server
-echo -e "${GREEN}Starting server on port $SERVER_PORT...${NC}"
-cd server
-source .venv/bin/activate 2>/dev/null || true
-python -m uvicorn server.main:app --host 0.0.0.0 --port $SERVER_PORT &
+# Server
+echo "1. Starting server..."
+python start_server.py &
 SERVER_PID=$!
-cd ..
 
-# Wait for server to start
-sleep 3
+sleep 5
 
-# Start agent
-echo -e "${GREEN}Starting agent...${NC}"
-cd agent
-source .venv/bin/activate 2>/dev/null || true
-python -m agent.main &
+# Agent
+echo "2. Starting agent..."
+cd agent && python run_agent.py --dev &
 AGENT_PID=$!
 cd ..
 
-# Start frontend
-echo -e "${GREEN}Starting web interface on port $WEB_PORT...${NC}"
-cd web
-if [ -f "package.json" ]; then
-    PORT=$WEB_PORT npm run dev &
-    WEB_PID=$!
-else
-    echo -e "${YELLOW}Web frontend not initialized yet${NC}"
-    WEB_PID=0
-fi
-cd ..
+echo -e "\n${GREEN}✅ Demo running!${NC}"
+echo "Server: http://localhost:8001/docs"
+echo "Press Ctrl+C to stop"
 
-echo -e "\n${GREEN}✅ All services started!${NC}"
-echo -e "   Server API: http://localhost:$SERVER_PORT"
-echo -e "   API Docs:   http://localhost:$SERVER_PORT/docs"
-echo -e "   Web UI:     http://localhost:$WEB_PORT"
-echo ""
-echo -e "${YELLOW}Press Ctrl+C to stop all services${NC}"
-
-# Wait for all processes
+trap "kill $SERVER_PID $AGENT_PID 2>/dev/null" EXIT
 wait

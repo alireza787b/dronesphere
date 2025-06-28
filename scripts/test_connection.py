@@ -14,9 +14,16 @@ from pathlib import Path
 # Add agent source to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "agent" / "src"))
 
-import structlog
+try:
+    import structlog
 
-from agent.connection import DroneConnection
+    from agent.connection import DroneConnection
+except ImportError as e:
+    print(f"Import error: {e}")
+    print(
+        "Make sure you're in the dronesphere directory and have installed dependencies"
+    )
+    sys.exit(1)
 
 # Configure logging
 structlog.configure(processors=[structlog.dev.ConsoleRenderer(colors=True)])

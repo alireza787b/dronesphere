@@ -7,7 +7,6 @@ AI-powered natural language drone control system with multi-tier architecture.
 DroneSphere enables natural language control of drones through an extensible command system, flexible AI pipeline, and real-time communication infrastructure.
 
 ### Key Features
-
 - 🗣️ Natural language drone control in multiple languages (English, Persian)
 - 🚁 Multi-drone support with individual session management
 - 🔌 Extensible command system with YAML definitions
@@ -29,7 +28,6 @@ DroneSphere enables natural language control of drones through an extensible com
 ## Quick Start
 
 ### Prerequisites
-
 - Python 3.11+
 - Node.js 18+
 - Docker (for SITL)
@@ -118,7 +116,7 @@ MIT License - see LICENSE file for details
 ## Author
 
 **Alireza Ghaderi**
-Email: <p30planets@gmail.com>
+Email: p30planets@gmail.com
 GitHub: [@alireza787b](https://github.com/alireza787b)
 
 ## Progress Tracking

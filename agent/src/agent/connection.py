@@ -166,12 +166,23 @@ class DroneConnection:
     async def _monitor_battery(self) -> None:
         """Monitor battery."""
         async for battery in self.drone.telemetry.battery():
-            self._state.battery_percent = battery.remaining_percent * 100
+            # remaining_percent is already 0-1, multiply by 100 for percentage
+            self._state.battery_percent = (
+                battery.remaining_percent * 100
+                if battery.remaining_percent <= 1
+                else battery.remaining_percent
+            )
 
     async def _monitor_gps(self) -> None:
         """Monitor GPS info."""
         async for gps_info in self.drone.telemetry.gps_info():
-            self._state.gps_fix = gps_info.fix_type >= 3  # 3D fix or better
+            # Convert FixType enum to int for comparison
+            fix_type_value = (
+                int(gps_info.fix_type.value)
+                if hasattr(gps_info.fix_type, "value")
+                else 0
+            )
+            self._state.gps_fix = fix_type_value >= 3  # 3D fix or better
 
     # High-level operations
 

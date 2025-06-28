@@ -1,0 +1,46 @@
+# shared/commands/basic/land.yaml
+apiVersion: v1
+kind: DroneCommand
+metadata:
+  name: land
+  category: flight
+  tags: ["basic", "vertical", "movement"]
+  version: "1.0.0"
+
+spec:
+  description:
+    brief: "Land the drone at current position"
+    detailed: |
+      Performs a controlled vertical descent and landing at the current
+      position. The drone will automatically disarm after landing.
+    examples:
+      - text: "Land the drone"
+        params: {}
+      - text: "Land now"
+        params: {}
+      - text: "Touch down"
+        params: {}
+      - text: "فرود بیا"
+        params: {}
+        language: fa
+      - text: "بنشین"
+        params: {}
+        language: fa
+
+  parameters: {}  # No parameters needed for basic landing
+
+  implementation:
+    handler: "basic_commands.LandCommand"
+    supported_backends: ["mavsdk", "pymavlink"]
+    timeout: 60  # Landing can take time
+
+  safety:
+    pre_checks:
+      - clear_below: true
+    emergency_action: "none"  # Landing is already the safest action
+
+  telemetry_feedback:
+    start: "Initiating landing sequence"
+    progress: "Descending, altitude: {current_altitude}m"
+    success: "Landed successfully"
+    failure: "Landing failed: {error}"
