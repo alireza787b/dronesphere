@@ -1,63 +1,84 @@
 #!/usr/bin/env python3
 # scripts/status.py
-"""Show current DroneSphere status."""
+"""Show current DroneSphere status and configuration."""
 
 import os
-import socket
+import sys
 from pathlib import Path
-
 from dotenv import load_dotenv
 
 # Load environment
 load_dotenv()
 
 # Colors
-G = "\033[92m"
-R = "\033[91m"
-Y = "\033[93m"
-B = "\033[94m"
-NC = "\033[0m"
+GREEN = '\033[92m'
+RED = '\033[91m'
+YELLOW = '\033[93m'
+BLUE = '\033[94m'
+NC = '\033[0m'
 
-print(f"\n{B}═══ DroneSphere Status ═══{NC}\n")
+print(f"{BLUE}DroneSphere Status{NC}")
+print("=" * 50)
 
-# Environment
-print(f"{Y}Environment:{NC}")
+# Configuration
+print(f"\n{YELLOW}Configuration:{NC}")
 print(f"  Server Port: {os.getenv('SERVER_PORT', '8001')}")
+print(f"  Web Port: {os.getenv('WEB_PORT', '3010')}")
 print(f"  LLM Provider: {os.getenv('LLM_PROVIDER', 'ollama')}")
+print(f"  CORS Origins: {os.getenv('CORS_ORIGINS', '[]')}")
 
-# System checks
-print(f"\n{Y}System Checks:{NC}")
-checks = {
-    ".env file": Path(".env").exists(),
-    "Server venv": Path("server/.venv").exists(),
-    "Agent venv": Path("agent/.venv").exists(),
+# Check services
+print(f"\n{YELLOW}Service Checks:{NC}")
+
+# Check if .env exists
+if Path(".env").exists():
+    print(f"  {GREEN}✓{NC} .env file exists")
+else:
+    print(f"  {RED}✗{NC} .env file missing (run: cp .env.example .env)")
+
+# Check virtual environments
+if Path("server/.venv").exists():
+    print(f"  {GREEN}✓{NC} Server virtual environment")
+else:
+    print(f"  {RED}✗{NC} Server venv missing (run: cd server && uv venv)")
+
+if Path("agent/.venv").exists():
+    print(f"  {GREEN}✓{NC} Agent virtual environment")
+else:
+    print(f"  {RED}✗{NC} Agent venv missing (run: cd agent && uv venv)")
+
+# Check ports
+import socket
+ports_to_check = {
+    "Server (8001)": 8001,
+    "Web (3010)": 3010,
+    "SITL (14540)": 14540,
 }
 
-for item, status in checks.items():
-    symbol = f"{G}✓{NC}" if status else f"{R}✗{NC}"
-    print(f"  {symbol} {item}")
-
-# Port status
-print(f"\n{Y}Port Status:{NC}")
-ports = {"Server": 8001, "SITL": 14540}
-for name, port in ports.items():
+print(f"\n{YELLOW}Port Status:{NC}")
+for name, port in ports_to_check.items():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    result = sock.connect_ex(("localhost", port))
+    result = sock.connect_ex(('localhost', port))
     sock.close()
-    status = f"{G}Active{NC}" if result == 0 else f"{R}Free{NC}"
-    print(f"  {name} ({port}): {status}")
+    
+    if result == 0:
+        print(f"  {name}: {GREEN}In use{NC}")
+    else:
+        print(f"  {name}: {RED}Free{NC}")
 
-# Quick commands
-print(f"\n{Y}Commands:{NC}")
-print(f"  Start server:  {G}python start_server.py{NC}")
-print(f"  Start agent:   {G}cd agent && python run_agent.py{NC}")
-print(f"  Run demo:      {G}./scripts/demo.sh{NC}")
-print(f"  API docs:      {B}http://localhost:8001/docs{NC}")
+# Quick start commands
+print(f"\n{YELLOW}Quick Start Commands:{NC}")
+print("  1. Start SITL:")
+print("     docker run --rm -it jonasvautherin/px4-gazebo-headless:latest")
+print("  2. Start Server:")
+print("     cd server && python run_server.py")
+print("  3. Start Agent:")
+print("     cd agent && python run_agent.py --dev")
+print("  4. Test System:")
+print("     python scripts/test_system.py")
 
-# Current phase
-print(f"\n{Y}Current Phase:{NC}")
-print("  ✅ Agent implementation")
-print("  ✅ Server foundation")
-print("  ✅ WebSocket communication")
-print("  🔄 Ready for LLM integration")
-print("  ⏳ Frontend development\n")
+print(f"\n{YELLOW}Useful Commands:{NC}")
+print(f"  Fix config: python scripts/fix_env.py")
+print(f"  Debug env: python scripts/debug_env.py")
+print(f"  Kill port: fuser -k 8001/tcp")
+print(f"  API Docs: http://localhost:{os.getenv('SERVER_PORT', '8001')}/docs")
