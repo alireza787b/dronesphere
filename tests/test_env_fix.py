@@ -6,7 +6,9 @@ Test environment loading fix.
 import os
 import sys
 from pathlib import Path
+
 from dotenv import load_dotenv
+
 
 # Fix environment loading
 def setup_environment():
@@ -15,9 +17,9 @@ def setup_environment():
     env_paths = [
         Path.cwd() / ".env",
         Path.cwd().parent / ".env",
-        Path(__file__).parent.parent / ".env"
+        Path(__file__).parent.parent / ".env",
     ]
-    
+
     for env_path in env_paths:
         if env_path.exists():
             load_dotenv(env_path)
@@ -25,6 +27,7 @@ def setup_environment():
             break
     else:
         print("⚠️  No .env file found, using system environment")
+
 
 # Load environment BEFORE any imports
 setup_environment()
@@ -34,5 +37,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "server" / "src"))
 
 # Test that environment is loaded
-print(f"OPENROUTER_API_KEY: {'✅ Set' if os.getenv('OPENROUTER_API_KEY') else '❌ Not set'}")
+print(
+    f"OPENROUTER_API_KEY: {'✅ Set' if os.getenv('OPENROUTER_API_KEY') else '❌ Not set'}"
+)
 print(f"LLM_PROVIDER: {os.getenv('LLM_PROVIDER', 'Not set')}")

@@ -34,7 +34,7 @@ console = Console()
 
 class TestScenario:
     """Test scenario for LLM integration"""
-    
+
     def __init__(self, name: str, inputs: List[str], language: str = "en"):
         self.name = name
         self.inputs = inputs
@@ -44,19 +44,19 @@ class TestScenario:
 
 async def test_llm_service():
     """Test the LLM service with various scenarios"""
-    
+
     console.print(Panel.fit("🤖 DroneSphere LLM Integration Test", style="bold blue"))
-    
+
     # Initialize service
     console.print("\n[yellow]Initializing LangChain service...[/yellow]")
-    
+
     # Check for API key
     api_key = os.getenv("OPENROUTER_API_KEY")
     if not api_key:
         console.print("[red]❌ OPENROUTER_API_KEY not found in environment![/red]")
         console.print("Please set: export OPENROUTER_API_KEY=your-key-here")
         return False
-    
+
     # Create config
     config = LLMConfig(
         provider="openrouter",
@@ -72,7 +72,7 @@ async def test_llm_service():
             "X-Title": "DroneSphere Test"
         }
     )
-    
+
     # Initialize service
     service = LangChainService()
     try:
@@ -81,7 +81,7 @@ async def test_llm_service():
     except Exception as e:
         console.print(f"[red]❌ Failed to initialize: {e}[/red]")
         return False
-    
+
     # Define test scenarios
     scenarios = [
         TestScenario(
@@ -134,17 +134,17 @@ async def test_llm_service():
             ]
         )
     ]
-    
+
     # Run scenarios
     session_id = "test-session-001"
-    
+
     for scenario in scenarios:
         console.print(f"\n[bold cyan]Testing: {scenario.name}[/bold cyan]")
         console.print("=" * 50)
-        
+
         for i, user_input in enumerate(scenario.inputs, 1):
             console.print(f"\n[blue]Test {i}:[/blue] {user_input}")
-            
+
             try:
                 # Create chat request
                 request = ChatRequest(
@@ -155,14 +155,14 @@ async def test_llm_service():
                     extract_commands=True,
                     execute_immediately=False
                 )
-                
+
                 # Process
                 response = await service.process_chat(request)
-                
+
                 # Display response
                 console.print(f"[green]AI Response:[/green] {response.response}")
                 console.print(f"[dim]Language: {response.language} | Confidence: {response.confidence:.2f}[/dim]")
-                
+
                 # Display extracted commands
                 if response.commands:
                     table = Table(title="Extracted Commands")

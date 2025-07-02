@@ -39,8 +39,10 @@ class ServerSettings(BaseSettings):
 
     # LLM settings
     llm_provider: str = Field(default="openrouter", env="LLM_PROVIDER")
-    llm_fallback_provider: str | None = Field(default="ollama", env="LLM_FALLBACK_PROVIDER")
-    
+    llm_fallback_provider: str | None = Field(
+        default="ollama", env="LLM_FALLBACK_PROVIDER"
+    )
+
     # OpenRouter settings
     openrouter_api_key: str | None = Field(default=None, env="OPENROUTER_API_KEY")
     openrouter_base_url: str = Field(
@@ -51,14 +53,16 @@ class ServerSettings(BaseSettings):
     )
     openrouter_temperature: float = Field(default=0.3, env="OPENROUTER_TEMPERATURE")
     openrouter_max_tokens: int = Field(default=1000, env="OPENROUTER_MAX_TOKENS")
-    
+
     # Other LLM providers
     ollama_host: str = Field(default="http://localhost:11434", env="OLLAMA_HOST")
     ollama_model: str = Field(default="llama2", env="OLLAMA_MODEL")
     openai_api_key: str | None = Field(default=None, env="OPENAI_API_KEY")
     openai_model: str = Field(default="gpt-4-turbo-preview", env="OPENAI_MODEL")
     anthropic_api_key: str | None = Field(default=None, env="ANTHROPIC_API_KEY")
-    anthropic_model: str = Field(default="claude-3-opus-20240229", env="ANTHROPIC_MODEL")
+    anthropic_model: str = Field(
+        default="claude-3-opus-20240229", env="ANTHROPIC_MODEL"
+    )
     deepseek_api_key: str | None = Field(default=None, env="DEEPSEEK_API_KEY")
     deepseek_api_base: str = Field(
         default="https://api.deepseek.com/v1", env="DEEPSEEK_API_BASE"
@@ -66,9 +70,7 @@ class ServerSettings(BaseSettings):
     deepseek_model: str = Field(default="deepseek-chat", env="DEEPSEEK_MODEL")
 
     # Conversation settings
-    conversation_history_size: int = Field(
-        default=50, env="CONVERSATION_HISTORY_SIZE"
-    )
+    conversation_history_size: int = Field(default=50, env="CONVERSATION_HISTORY_SIZE")
     conversation_context_window: int = Field(
         default=10, env="CONVERSATION_CONTEXT_WINDOW"
     )

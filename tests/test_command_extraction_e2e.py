@@ -25,7 +25,7 @@ from server.services.llm.providers.openrouter import OpenRouterProvider
 async def test_with_mock_response():
     """Test with a mock LLM response to verify parsing works."""
     print("\n=== Testing with Mock LLM Response ===")
-    
+
     # Create provider
     config = OpenRouterConfig(
         api_key=os.getenv("OPENROUTER_API_KEY", "test-key"),
@@ -33,7 +33,7 @@ async def test_with_mock_response():
         temperature=0.1,
     )
     provider = OpenRouterProvider(config)
-    
+
     # Mock the LLM response by overriding the parse method
     mock_responses = [
         # Response 1: With markdown wrapper
@@ -55,7 +55,6 @@ async def test_with_mock_response():
             "overall_confidence": 0.95
         }
         ```""",
-        
         # Response 2: Without markdown, mixed case
         """
         {
@@ -76,7 +75,7 @@ async def test_with_mock_response():
         }
         """,
     ]
-    
+
     for i, mock_response in enumerate(mock_responses, 1):
         print(f"\n--- Test Case {i} ---")
         try:
@@ -101,9 +100,9 @@ async def test_real_extraction():
     if not api_key or api_key == "test-key":
         print("\n=== Skipping Real API Test (No API Key) ===")
         return
-    
+
     print("\n=== Testing with Real OpenRouter API ===")
-    
+
     # Create provider
     config = OpenRouterConfig(
         api_key=api_key,
@@ -112,14 +111,14 @@ async def test_real_extraction():
         max_tokens=500,
     )
     provider = OpenRouterProvider(config)
-    
+
     # Create context
     context = ConversationContext(
         session_id="test-session",
         drone_id="test-drone-1",
         drone_state={"status": "ready"},
     )
-    
+
     # Define available commands
     available_commands = [
         {
@@ -130,17 +129,17 @@ async def test_real_extraction():
                     "examples": [
                         {"text": "Take off to 20 meters", "params": {"altitude": 20}},
                         {"text": "Launch to 50 feet", "params": {"altitude": 15.24}},
-                    ]
+                    ],
                 },
                 "parameters": {
                     "altitude": {
                         "type": "float",
                         "required": True,
                         "default": 10.0,
-                        "constraints": {"min": 1, "max": 50}
+                        "constraints": {"min": 1, "max": 50},
                     }
-                }
-            }
+                },
+            },
         },
         {
             "metadata": {"name": "land", "category": "flight"},
@@ -150,40 +149,41 @@ async def test_real_extraction():
                     "examples": [
                         {"text": "Land the drone", "params": {}},
                         {"text": "Touch down", "params": {}},
-                    ]
+                    ],
                 },
-                "parameters": {}
-            }
-        }
+                "parameters": {},
+            },
+        },
     ]
-    
+
     # Test inputs
     test_inputs = [
         "Take off to 15 meters",
         "Land the drone safely",
         "First take off to 20 meters, then land",
     ]
-    
+
     for user_input in test_inputs:
         print(f"\n--- Testing: '{user_input}' ---")
         try:
             result = await provider.extract_commands(
-                user_input,
-                context,
-                available_commands
+                user_input, context, available_commands
             )
-            
-            print(f"✅ Extraction successful")
+
+            print("✅ Extraction successful")
             print(f"   Commands found: {len(result.commands)}")
             for j, cmd in enumerate(result.commands):
-                print(f"   Command {j+1}: {cmd['name']} with params {cmd.get('parameters', {})}")
+                print(
+                    f"   Command {j+1}: {cmd['name']} with params {cmd.get('parameters', {})}"
+                )
             print(f"   Response: {result.response_text}")
             print(f"   Confidence: {result.confidence}")
             print(f"   Language: {result.detected_language}")
-            
+
         except Exception as e:
             print(f"❌ Extraction failed: {e}")
             import traceback
+
             traceback.print_exc()
 
 
@@ -192,13 +192,13 @@ async def main():
     print("=" * 50)
     print("Command Extraction End-to-End Test")
     print("=" * 50)
-    
+
     # Test with mock responses
     await test_with_mock_response()
-    
+
     # Test with real API
     await test_real_extraction()
-    
+
     print("\n" + "=" * 50)
     print("All tests complete!")
     print("=" * 50)

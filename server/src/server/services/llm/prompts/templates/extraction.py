@@ -4,7 +4,6 @@ Command extraction prompt templates with multi-layer construction.
 OPTIMIZED VERSION - Shorter but more effective.
 """
 
-from typing import Any, Dict, List, Optional
 
 from ..base import BasePromptTemplate, PromptLayer
 
@@ -13,10 +12,10 @@ class CommandExtractionTemplate(BasePromptTemplate):
     """
     Optimized template for extracting commands from natural language.
     """
-    
+
     def _build_template(self) -> None:
         """Build the multi-layer extraction template."""
-        
+
         # Layer 1: Role Definition (Priority 0)
         self.add_section(
             PromptLayer.ROLE,
@@ -25,9 +24,9 @@ class CommandExtractionTemplate(BasePromptTemplate):
 2. NEVER invent or modify command names
 3. If a command isn't in the list, return empty commands array
 4. Match commands EXACTLY - 'move' is NOT 'move_local'""",
-            priority=0
+            priority=0,
         )
-        
+
         # Layer 2: Available Commands (Priority 5)
         self.add_section(
             PromptLayer.CONTEXT,
@@ -35,9 +34,9 @@ class CommandExtractionTemplate(BasePromptTemplate):
 {available_commands}
 
 ⚠️ CRITICAL: You MUST use the EXACT command names above. Do NOT create new commands.""",
-            priority=5
+            priority=5,
         )
-        
+
         # Layer 3: Core Instructions (Priority 20)
         self.add_section(
             PromptLayer.INSTRUCTIONS,
@@ -52,9 +51,9 @@ Parameter Extraction:
 - For move_local: north/south is Y-axis, east/west is X-axis, up/down is Z-axis
 - Climbing means negative down value (up = -down)
 - Extract all numeric values with units""",
-            priority=20
+            priority=20,
         )
-        
+
         # Layer 4: Examples with Strict Matching (Priority 30)
         self.add_section(
             PromptLayer.EXAMPLES,
@@ -71,9 +70,9 @@ Output: commands=[] because "flip" is NOT available
 Input: "Fly north"
 Available: ["takeoff", "land", "move_local"]
 Output: Use "move_local" but requires_clarification for distance""",
-            priority=30
+            priority=30,
         )
-        
+
         # Layer 5: Output Format (Priority 50)
         self.add_section(
             PromptLayer.FORMAT,
@@ -98,14 +97,13 @@ Output: Use "move_local" but requires_clarification for distance""",
 User Input: "{user_input}"
 
 RESPOND WITH PURE JSON:""",
-            priority=50
+            priority=50,
         )
 
 
-
-def create_extraction_examples() -> Dict[str, str]:
+def create_extraction_examples() -> dict[str, str]:
     """Create optimized example JSON outputs."""
-    
+
     return {
         "example_clear": """{
     "commands": [{
@@ -121,7 +119,6 @@ def create_extraction_examples() -> Dict[str, str]:
     "detected_language": "en",
     "overall_confidence": 0.95
 }""",
-        
         "example_ambiguous": """{
     "commands": [],
     "response_text": "What altitude would you like?",
@@ -129,6 +126,5 @@ def create_extraction_examples() -> Dict[str, str]:
     "clarification_questions": ["Please specify altitude in meters"],
     "detected_language": "en",
     "overall_confidence": 0.3
-}"""
+}""",
     }
-
