@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"      # Uses PEP 660 editable installs by default :contentReference[oaicite:6]{index=6}
+
+[project]
+name = "dronesphere-draft"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+  "rasa",
+  "langchain-community",
+  "openrouter-client",
+  "pyyaml",
+  "pydantic",
+  "nemoguardrails",
+  "python-dotenv",
+  "openai>=1.93.0",
+]
+
+[tool.uv]
+package = true                               # Treats this as an installable package
+
+[tool.setuptools]
+py-modules = ["demo", "main"]                # Explicitly include demo.py and main.py

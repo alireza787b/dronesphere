@@ -8,7 +8,7 @@ Manages drone connections, sessions, and communication.
 import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import Dict, Any, Optional, Set
 
 import structlog
 from fastapi import WebSocket
@@ -302,3 +302,36 @@ class DroneManager:
         # Clean up disconnected clients
         for client_id in disconnected_clients:
             await self.unregister_client(client_id)
+
+
+    # Add to server/src/server/core/drone_manager.py
+
+    async def send_command_manifest(self, drone_id: str, manifest: Dict[str, Any]):
+        """Send command manifest to drone."""
+        session = self.drone_sessions.get(drone_id)
+        if not session:
+            logger.error(f"Drone {drone_id} not connected")
+            return False
+        
+        try:
+            message = {
+                "type": "command_manifest",
+                "data": manifest
+            }
+            await session.websocket.send_json(message)
+            logger.info(
+                "Sent command manifest to drone",
+                drone_id=drone_id,
+                manifest_id=manifest.get("manifest_id")
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send manifest to drone {drone_id}: {e}")
+            return False
+
+    def get_drone_session(self, drone_id: str):
+        """Get drone session by ID."""
+        return self.drone_sessions.get(drone_id)
+
+# Singleton instance
+drone_manager = DroneManager()

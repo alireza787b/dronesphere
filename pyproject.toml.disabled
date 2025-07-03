@@ -53,3 +53,8 @@ ignore = ["E501", "B008"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
+
+[tool.uv.workspace]
+members = [
+    "draft-test",
+]

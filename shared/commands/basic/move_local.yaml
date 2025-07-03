@@ -1,0 +1,178 @@
+# Drone movement command definition for local NED coordinate system
+# This command enables precise drone positioning relative to current location
+apiVersion: v1
+kind: DroneCommand
+metadata:
+  name: move_local
+  category: navigation
+  tags: ["movement", "local", "NED", "positioning", "relative"]
+  version: "1.0.0"
+  author: "DroneSphere Team"
+  created: "2025-01-03"
+  stability: "stable"
+
+spec:
+  description:
+    brief: "Move drone in local NED coordinates"
+    detailed: |
+      Moves the drone relative to its current position using the
+      North-East-Down (NED) coordinate system. This is a body-fixed
+      reference frame where:
+      - North (X): Forward direction relative to drone heading
+      - East (Y): Right direction relative to drone heading  
+      - Down (Z): Downward direction (positive down, negative up)
+      
+      The command maintains current heading unless specified otherwise.
+      All movements are executed at safe velocities with continuous
+      obstacle detection and position validation.
+    examples:
+      - text: "Move 5 meters north and 2 meters east"
+        params:
+          north: 5.0
+          east: 2.0
+          down: 0.0
+      - text: "Go 10m forward and climb 3m"
+        params:
+          north: 10.0
+          east: 0.0
+          down: -3.0  # Negative down means up
+      - text: "Move 5m north, 2m east, and 1m up"
+        params:
+          north: 5.0
+          east: 2.0
+          down: -1.0
+      - text: "Shift 3 meters to the right"
+        params:
+          north: 0.0
+          east: 3.0
+          down: 0.0
+      - text: "Descend 2 meters"
+        params:
+          north: 0.0
+          east: 0.0
+          down: 2.0
+
+  parameters:
+    north:
+      type: float
+      required: false
+      default: 0.0
+      unit: meters
+      description: "Distance to move north (forward relative to heading)"
+      validation:
+        min: -100.0
+        max: 100.0
+        precision: 0.1
+    
+    east:
+      type: float
+      required: false
+      default: 0.0
+      unit: meters
+      description: "Distance to move east (right relative to heading)"
+      validation:
+        min: -100.0
+        max: 100.0
+        precision: 0.1
+    
+    down:
+      type: float
+      required: false
+      default: 0.0
+      unit: meters
+      description: "Distance to move down (negative for up)"
+      validation:
+        min: -50.0  # Max climb
+        max: 50.0   # Max descent
+        precision: 0.1
+    
+    speed:
+      type: float
+      required: false
+      default: 2.0
+      unit: meters_per_second
+      description: "Movement speed (auto-adjusted for safety)"
+      validation:
+        min: 0.5
+        max: 10.0
+        precision: 0.1
+    
+    maintain_heading:
+      type: boolean
+      required: false
+      default: true
+      description: "Keep current heading during movement"
+
+  constraints:
+    # At least one movement parameter must be non-zero
+    require_movement: true
+    # Total displacement limit for safety
+    max_total_displacement: 150.0
+    # Altitude limits (relative to home)
+    min_altitude_agl: 1.0
+    max_altitude_agl: 120.0
+
+  implementation:
+    handler: "navigation_commands.MoveLocalCommand"
+    supported_backends: ["mavsdk", "pymavlink", "ardupilot"]
+    timeout: 60
+    retry_policy:
+      max_attempts: 2
+      backoff_factor: 1.5
+    
+    execution_stages:
+      - validate_parameters
+      - check_safety_conditions
+      - calculate_target_position
+      - verify_path_clearance
+      - execute_movement
+      - confirm_position_reached
+
+  safety:
+    pre_checks:
+      - position_estimate:
+          required: true
+          accuracy_hdop_max: 2.0
+          satellites_min: 8
+      - obstacle_clearance:
+          required: true
+          min_distance: 5.0
+          scan_radius: 10.0
+      - battery_min: 30
+      - wind_speed_max: 15.0  # m/s
+      - fence_boundary: true
+      - terrain_clearance:
+          min_agl: 3.0
+          lookahead: true
+    
+    emergency_action: "hold_position"
+    failsafe_mode: "return_to_launch"
+    
+    continuous_monitoring:
+      - position_drift_max: 2.0
+      - vibration_level_max: 30.0
+      - cpu_usage_max: 80
+      - temperature_max: 75  # Celsius
+    
+  telemetry_feedback:
+    start: "Moving to position: N:{north}m, E:{east}m, D:{down}m"
+    progress: "Distance remaining: {distance}m, ETA: {eta}s"
+    waypoint: "Waypoint reached, continuing movement"
+    success: "Target position reached within {accuracy}m"
+    failure: "Movement aborted: {error}"
+    warnings:
+      - obstacle_detected: "Obstacle detected, adjusting path"
+      - wind_compensation: "Compensating for wind: {wind_speed}m/s"
+      - battery_low: "Low battery detected, movement may be limited"
+
+  performance:
+    position_accuracy: 0.5  # meters
+    velocity_tracking: 0.95  # percentage
+    power_efficiency: 0.85  # relative to hover
+    typical_duration: "distance / speed + 5"  # seconds
+
+  compatibility:
+    firmware_min: "4.0.0"
+    protocols: ["MAVLink2", "MAVLink1"]
+    flight_modes: ["GUIDED", "AUTO", "LOITER"]
+    coordinate_systems: ["NED", "ENU"]  # With auto-conversion

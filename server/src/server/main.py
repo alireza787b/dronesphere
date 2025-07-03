@@ -21,6 +21,8 @@ from fastapi.staticfiles import StaticFiles
 from server.api import chat, commands, drones, websocket
 from server.core.config import get_settings
 from server.core.logging import setup_logging
+from server.api.v1 import chat as chat_v1
+
 
 # Load environment variables
 load_dotenv()
@@ -74,6 +76,11 @@ app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
 app.include_router(commands.router, prefix="/api/v1/commands", tags=["commands"])
 app.include_router(drones.router, prefix="/api/v1/drones", tags=["drones"])
 app.include_router(websocket.router, prefix="/ws", tags=["websocket"])
+app.include_router(
+    chat_v1.router,
+    prefix="/api/v1/chat",
+    tags=["chat"]
+)
 
 
 # Root endpoint
@@ -93,6 +100,8 @@ async def root():
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy", "service": "dronesphere-server", "version": "0.1.0"}
+
+
 
 
 # Mount static files if web directory exists
