@@ -1,1 +1,0 @@
-"""DroneSphere server package."""
