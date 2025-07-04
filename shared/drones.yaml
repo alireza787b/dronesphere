@@ -1,0 +1,30 @@
+# shared/drones.yaml
+# ===================================
+# Drone configuration for the system
+
+drones:
+  - id: 1
+    name: "Primary Drone"
+    type: "px4_sitl"
+    connection:
+      protocol: "udp"
+      address: "127.0.0.1"
+      port: 14540
+    capabilities:
+      - "takeoff"
+      - "land"
+      - "hold"
+      - "goto"
+    limits:
+      max_altitude: 50.0  # meters
+      max_speed: 15.0     # m/s
+      max_range: 1000.0   # meters
+    safety:
+      geofence_enabled: true
+      failsafe_enabled: true
+      emergency_land_enabled: true
+
+# Future expansion for multi-drone
+# - id: 2
+#   name: "Secondary Drone"
+#   ...

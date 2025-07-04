@@ -1,0 +1,54 @@
+# shared/commands/advanced/circle.yaml
+# ===================================
+# (Future expansion - not implemented in MVP)
+
+apiVersion: v1
+kind: DroneCommand
+metadata:
+  name: circle
+  version: 1.0.0
+  category: patterns
+  tags: [advanced, patterns, autonomous]
+spec:
+  description:
+    brief: "Fly in circular pattern"
+    detailed: |
+      Commands the drone to fly in a circular pattern around the current position
+      or a specified center point.
+  parameters:
+    radius:
+      type: float
+      default: 10.0
+      constraints:
+        min: 5.0
+        max: 100.0
+        unit: "m"
+      description: "Circle radius in meters"
+    speed:
+      type: float
+      default: 5.0
+      constraints:
+        min: 1.0
+        max: 15.0
+        unit: "m/s"
+      description: "Flight speed in meters per second"
+    turns:
+      type: float
+      default: 1.0
+      constraints:
+        min: 0.25
+        max: 10.0
+        unit: "revolutions"
+      description: "Number of complete turns to make"
+    clockwise:
+      type: bool
+      default: true
+      description: "Direction of rotation (true for clockwise)"
+  implementation:
+    handler: "dronesphere.commands.circle.CircleCommand"
+    supported_backends: ["mavsdk"]
+    timeout: 300
+  telemetry_feedback:
+    start: "Starting circular pattern with radius {radius}m"
+    success: "Completed circular pattern"
+    error: "Circle pattern failed: {error}"

@@ -1,0 +1,82 @@
+# docker-compose.prod.yml
+# ===================================
+# Production docker-compose
+
+version: '3.8'
+
+services:
+  # DroneSphere Agent
+  agent:
+    image: dronesphere/agent:latest
+    container_name: dronesphere-agent-prod
+    environment:
+      - AGENT_DRONE_CONNECTION_STRING=${DRONE_CONNECTION_STRING}
+      - BACKEND_TELEMETRY_BACKEND=${TELEMETRY_BACKEND:-mavsdk}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DEBUG=false
+    volumes:
+      - ./config:/app/shared:ro
+      - agent_logs:/app/logs
+    networks:
+      - dronesphere
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  # DroneSphere Server
+  server:
+    image: dronesphere/server:latest
+    container_name: dronesphere-server-prod
+    depends_on:
+      - agent
+    ports:
+      - "${SERVER_PORT:-8000}:8000"
+    environment:
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8000
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DEBUG=false
+    volumes:
+      - ./config:/app/shared:ro
+      - server_logs:/app/logs
+    networks:
+      - dronesphere
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  # Reverse proxy (nginx)
+  nginx:
+    image: nginx:alpine
+    container_name: dronesphere-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - server
+    networks:
+      - dronesphere
+    restart: unless-stopped
+
+volumes:
+  agent_logs:
+  server_logs:
+
+networks:
+  dronesphere:
+    driver: bridge

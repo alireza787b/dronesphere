@@ -1,0 +1,35 @@
+# shared/config/safety.yaml
+# ===================================
+# Safety configuration and limits
+
+safety:
+  global_limits:
+    max_altitude: 120.0  # meters AGL
+    max_speed: 20.0      # m/s
+    max_range: 2000.0    # meters from home
+    
+  geofence:
+    enabled: true
+    type: "cylinder"  # cylinder, polygon
+    radius: 500.0     # meters
+    max_altitude: 100.0
+    
+  failsafe:
+    enabled: true
+    actions:
+      rc_loss: "return_to_launch"
+      data_link_loss: "return_to_launch" 
+      low_battery: "land"
+      geofence_breach: "return_to_launch"
+      
+  emergency:
+    enabled: true
+    auto_disarm_timeout: 10.0  # seconds
+    emergency_land_speed: 1.0  # m/s
+    
+  pre_flight_checks:
+    - "gps_fix"
+    - "battery_level"
+    - "calibration_status"
+    - "geofence_valid"
+    - "communication_link"

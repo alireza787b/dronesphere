@@ -1,0 +1,120 @@
+# shared/commands/navigation/goto.yaml - Enhanced with dual positioning modes
+# =================================================================================
+apiVersion: v1
+kind: DroneCommand
+metadata:
+  name: goto
+  version: 2.0.0
+  category: navigation
+  tags: [navigation, offboard, local, velocity-controlled, dual-mode]
+spec:
+  description:
+    brief: "Fly to local NED coordinates with absolute or relative positioning"
+    detailed: |
+      Commands the drone to fly to specified local NED (North, East, Down) coordinates
+      using MAVSDK offboard mode with configurable speed control and positioning modes.
+      
+      POSITIONING MODES:
+      1. ABSOLUTE (default): Coordinates relative to takeoff origin
+         Example: goto(north=10, east=5, down=-3) → "fly to (10,5,-3) from origin"
+      
+      2. RELATIVE: Movement delta from current position  
+         Example: goto(north=5, east=0, down=-2, relative=True) → "move 5m north, 2m up from here"
+      
+      Enhanced Features:
+      - Dual positioning modes (absolute/relative)
+      - Real position verification using MAVSDK position_velocity_ned()
+      - Configurable maximum speed and approach speed
+      - Movement detection to verify drone actually moves
+      - Detailed progress logging and telemetry feedback
+      
+      Coordinate System (NED):
+      - North: positive values = north direction (meters)
+      - East: positive values = east direction (meters)  
+      - Down: negative values = altitude (e.g., down=-5 = 5m altitude)
+      - Yaw: heading in degrees (0 = north, 90 = east)
+      
+      Safety Features:
+      - Drone must be flying before executing goto
+      - Uses offboard mode for precise positioning
+      - Speed limits prevent aggressive movements
+      - Position tolerance checking for completion
+      - Movement verification detects if drone actually moves
+      - Automatic fallback to hold if position unavailable
+  parameters:
+    north:
+      type: float
+      default: 0.0
+      constraints:
+        min: -1000.0
+        max: 1000.0
+        unit: "m"
+      description: "North coordinate/delta in meters (positive = north direction)"
+    east:
+      type: float
+      default: 0.0
+      constraints:
+        min: -1000.0
+        max: 1000.0
+        unit: "m"
+      description: "East coordinate/delta in meters (positive = east direction)"
+    down:
+      type: float
+      default: -5.0
+      constraints:
+        min: -100.0
+        max: 10.0
+        unit: "m"
+      description: "Down coordinate/delta in meters (negative = altitude, e.g., -5 = 5m high)"
+    yaw:
+      type: float
+      default: 0.0
+      constraints:
+        min: -180.0
+        max: 180.0
+        unit: "deg"
+      description: "Target heading in degrees (0 = north, 90 = east)"
+    relative:
+      type: bool
+      default: false
+      description: "Positioning mode: false = absolute coordinates, true = relative movement from current position"
+    tolerance:
+      type: float
+      default: 2.0
+      constraints:
+        min: 0.5
+        max: 10.0
+        unit: "m"
+      description: "Position tolerance for completion (meters)"
+    timeout:
+      type: float
+      default: 60.0
+      constraints:
+        min: 10.0
+        max: 300.0
+        unit: "s"
+      description: "Maximum time to wait for position reached"
+    max_speed:
+      type: float
+      default: 2.0
+      constraints:
+        min: 0.5
+        max: 10.0
+        unit: "m/s"
+      description: "Maximum horizontal speed during movement"
+    approach_speed:
+      type: float
+      default: 0.5
+      constraints:
+        min: 0.1
+        max: 2.0
+        unit: "m/s"
+      description: "Speed when approaching target (for precision)"
+  implementation:
+    handler: "dronesphere.commands.navigation.goto.GotoCommand"
+    supported_backends: ["mavsdk"]
+    timeout: 90
+  telemetry_feedback:
+    start: "Flying to {mode} position N:{north}m E:{east}m D:{down}m at max {max_speed}m/s..."
+    success: "Reached target position within {tolerance}m"
+    error: "Goto failed: {error}"

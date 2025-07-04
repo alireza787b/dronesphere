@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  # PX4 SITL simulation
+  sitl:
+    image: jonasvautherin/px4-gazebo-headless:latest
+    container_name: dronesphere-sitl
+    ports:
+      - "14540:14540/udp"  # MAVLink SITL
+      - "14550:14550/udp"  # MAVLink GCS
+    environment:
+      - PX4_SIM_MODEL=iris
+      - PX4_SIM_WORLD=empty
+    networks:
+      - dronesphere
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nc", "-u", "-z", "localhost", "14540"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # MAVLink Router for connection management
+  mavlink-router:
+    image: alpine:latest
+    container_name: dronesphere-mavrouter
+    depends_on:
+      - sitl
+    ports:
+      - "14569:14569/udp"  # Additional MAVLink port
+    command: >
+      sh -c "
+        apk add --no-cache socat &&
+        echo 'Starting MAVLink router...' &&
+        socat UDP4-RECV:14550,bind,fork UDP4-SENDTO:host.docker.internal:14569
+      "
+    networks:
+      - dronesphere
+    restart: unless-stopped
+
+networks:
+  dronesphere:
+    driver: bridge

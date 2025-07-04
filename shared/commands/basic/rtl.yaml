@@ -1,0 +1,44 @@
+# ===================================
+apiVersion: v1
+kind: DroneCommand
+metadata:
+  name: rtl
+  version: 1.0.0
+  category: flight
+  tags: [basic, flight, return, safety]
+spec:
+  description:
+    brief: "Return to launch position"
+    detailed: |
+      Commands the drone to return to its launch position using the native PX4 RTL mode.
+      The behavior depends on PX4 configuration but typically includes:
+      - Climb to RTL altitude if needed
+      - Fly to launch position
+      - Land at launch position (if wait_for_landing=true)
+      
+      Safety considerations:
+      - Uses native PX4 RTL for maximum safety
+      - Can be executed from most flight states
+      - Automatic altitude management
+      - Configurable landing behavior
+  parameters:
+    timeout:
+      type: float
+      default: 120.0
+      constraints:
+        min: 30.0
+        max: 600.0
+        unit: "s"
+      description: "Maximum time to wait for RTL completion"
+    wait_for_landing:
+      type: bool
+      default: true
+      description: "Wait for complete RTL sequence including landing"
+  implementation:
+    handler: "dronesphere.commands.basic.rtl.RtlCommand"
+    supported_backends: ["mavsdk"]
+    timeout: 150
+  telemetry_feedback:
+    start: "Returning to launch position..."
+    success: "RTL completed successfully"
+    error: "RTL failed: {error}"
