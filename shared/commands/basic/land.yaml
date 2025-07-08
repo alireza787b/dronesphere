@@ -1,34 +1,43 @@
 apiVersion: v1
 kind: DroneCommand
 metadata:
-  name: land
-  version: 1.0.0
   category: flight
-  tags: [basic, flight]
+  critical: true
+  failsafe: emergency_stop
+  max_retries: 1
+  name: land
+  tags:
+  - basic
+  - flight
+  timeout_behavior: failsafe
+  version: 1.0.0
 spec:
   description:
-    brief: "Land the drone"
-    detailed: |
-      Commands the drone to land at its current position.
+    brief: Land the drone
+    detailed: 'Commands the drone to land at its current position.
+
       The drone will descend and disarm once it touches the ground.
-  parameters:
-    timeout:
-      type: float
-      default: 30.0
-      constraints:
-        min: 10.0
-        max: 120.0
-        unit: "s"
-      description: "Maximum time to wait for landing completion"
-    precision_land:
-      type: bool
-      default: false
-      description: "Use precision landing if available"
+
+      '
   implementation:
-    handler: "dronesphere.commands.basic.land.LandCommand"
-    supported_backends: ["mavsdk"]
+    handler: dronesphere.commands.basic.land.LandCommand
+    supported_backends:
+    - mavsdk
     timeout: 60
+  parameters:
+    precision_land:
+      default: false
+      description: Use precision landing if available
+      type: bool
+    timeout:
+      constraints:
+        max: 120.0
+        min: 10.0
+        unit: s
+      default: 30.0
+      description: Maximum time to wait for landing completion
+      type: float
   telemetry_feedback:
-    start: "Landing drone..."
-    success: "Landing completed successfully"
-    error: "Landing failed: {error}"
+    error: 'Landing failed: {error}'
+    start: Landing drone...
+    success: Landing completed successfully

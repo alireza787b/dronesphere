@@ -1,14 +1,10 @@
-# dronesphere/agent/__init__.py
-# ===================================
+"""DroneSphere Agent - on-drone control and execution.
 
-"""Agent module for command execution and drone management."""
+This package provides the agent functionality for single drone operations,
+including hardware connection, command execution, and API serving.
+"""
 
-from .connection import DroneConnection
-from .runner import CommandRunner
-from .main import main
+from .main import DroneAgent
+from .instance import get_agent
 
-__all__ = [
-    "DroneConnection",
-    "CommandRunner", 
-    "main",
-]
+__all__ = ["DroneAgent", "get_agent"]

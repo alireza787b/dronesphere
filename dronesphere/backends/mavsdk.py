@@ -1,3 +1,4 @@
+# dronesphere/backends/mavsdk.py
 """MAVSDK backend implementation with correct NED position telemetry.
 
 KEY FIX: MAVSDK Python does NOT have telemetry.position_ned() method!
@@ -306,9 +307,7 @@ class MavsdkBackend(AbstractBackend):
                     )
                     break
             except Exception as e:
-                logger.debug("gps_position_failed", error=str(e), drone_id=self.drone_id)
-            
-            # CRITICAL FIX: Get NED position using position_velocity_ned()
+                logger.debug("gps_position_failed", error=str(e), drone_id=self.drone_id)            # CRITICAL FIX: Get NED position using position_velocity_ned()
             # This is the ONLY working method in MAVSDK Python for local NED coordinates
             try:
                 async for odom in self.drone.telemetry.position_velocity_ned():
@@ -321,12 +320,17 @@ class MavsdkBackend(AbstractBackend):
                         position_data.north = safe_float(ned_pos.north_m)
                         position_data.east = safe_float(ned_pos.east_m)
                         position_data.down = safe_float(ned_pos.down_m)
+                        # FIX: Use NED down coordinate to calculate relative altitude
+                        # NED down is negative when above ground, so negate it
+                        if ned_pos.down_m is not None:
+                            position_data.altitude_relative = max(0.0, -safe_float(ned_pos.down_m))
                     else:
                         # Create position data with just NED coordinates
                         position_data = Position(
                             north=safe_float(ned_pos.north_m),
                             east=safe_float(ned_pos.east_m),
-                            down=safe_float(ned_pos.down_m)
+                            down=safe_float(ned_pos.down_m),
+                            altitude_relative=max(0.0, -safe_float(ned_pos.down_m))  # Convert NED down to altitude
                         )
                     
                     # Also get velocity from the same odometry data

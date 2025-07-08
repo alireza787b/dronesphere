@@ -1,14 +1,7 @@
-# dronesphere/server/__init__.py
-# ===================================
+# server/__init__.py
+"""DroneSphere Server - multi-drone coordination."""
 
-"""Server module for REST API."""
+from .coordinator import FleetManager, TelemetryCache
+from .client import AgentClient
 
-from .api import app
-from .client import DroneSphereClient
-from .main import main
-
-__all__ = [
-    "app",
-    "DroneSphereClient",
-    "main",
-]
+__all__ = ["FleetManager", "TelemetryCache", "AgentClient"]

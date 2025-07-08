@@ -1,30 +1,49 @@
+# shared/commands/utility/wait.yaml
 apiVersion: v1
 kind: DroneCommand
 metadata:
-  name: wait
-  version: 1.0.0
   category: utility
-  tags: [basic, utility, timing]
+  critical: false
+  max_retries: 0
+  name: wait
+  tags:
+  - basic
+  - utility
+  - timing
+  timeout_behavior: continue
+  version: 1.0.0
 spec:
   description:
-    brief: "Wait for specified duration"
-    detailed: |
-      Pauses command execution for the specified number of seconds.
+    brief: Wait for specified duration
+    detailed: 'Pauses command execution for the specified number of seconds.
+
       The drone will maintain its current state during the wait period.
-  parameters:
-    seconds:
-      type: float
-      default: 1.0
-      constraints:
-        min: 0.1
-        max: 300.0
-        unit: "s"
-      description: "Duration to wait in seconds"
+
+      '
   implementation:
-    handler: "dronesphere.commands.utility.wait.WaitCommand"
-    supported_backends: ["mavsdk", "pymavlink"]
+    handler: dronesphere.commands.utility.wait.WaitCommand
+    supported_backends:
+    - mavsdk
+    - pymavlink
     timeout: 310
+  parameters:
+    duration:
+      constraints:
+        max: 300.0
+        min: 0.1
+        unit: s
+      default: 1.0
+      description: Duration to wait in seconds
+      type: float
+    seconds:
+      constraints:
+        max: 300.0
+        min: 0.1
+        unit: s
+      default: 1.0
+      description: (Deprecated) Duration to wait in seconds - use 'duration' instead
+      type: float
   telemetry_feedback:
-    start: "Waiting for {seconds} seconds..."
-    success: "Wait completed"
-    error: "Wait cancelled: {error}"
+    error: 'Wait cancelled: {error}'
+    start: Waiting for {duration} seconds...
+    success: Wait completed

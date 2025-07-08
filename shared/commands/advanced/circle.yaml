@@ -1,54 +1,60 @@
-# shared/commands/advanced/circle.yaml
-# ===================================
-# (Future expansion - not implemented in MVP)
-
 apiVersion: v1
 kind: DroneCommand
 metadata:
-  name: circle
-  version: 1.0.0
   category: patterns
-  tags: [advanced, patterns, autonomous]
+  critical: false
+  max_retries: 0
+  name: circle
+  tags:
+  - advanced
+  - patterns
+  - autonomous
+  timeout_behavior: continue
+  version: 1.0.0
 spec:
   description:
-    brief: "Fly in circular pattern"
-    detailed: |
-      Commands the drone to fly in a circular pattern around the current position
+    brief: Fly in circular pattern
+    detailed: 'Commands the drone to fly in a circular pattern around the current
+      position
+
       or a specified center point.
-  parameters:
-    radius:
-      type: float
-      default: 10.0
-      constraints:
-        min: 5.0
-        max: 100.0
-        unit: "m"
-      description: "Circle radius in meters"
-    speed:
-      type: float
-      default: 5.0
-      constraints:
-        min: 1.0
-        max: 15.0
-        unit: "m/s"
-      description: "Flight speed in meters per second"
-    turns:
-      type: float
-      default: 1.0
-      constraints:
-        min: 0.25
-        max: 10.0
-        unit: "revolutions"
-      description: "Number of complete turns to make"
-    clockwise:
-      type: bool
-      default: true
-      description: "Direction of rotation (true for clockwise)"
+
+      '
   implementation:
-    handler: "dronesphere.commands.circle.CircleCommand"
-    supported_backends: ["mavsdk"]
+    handler: dronesphere.commands.circle.CircleCommand
+    supported_backends:
+    - mavsdk
     timeout: 300
+  parameters:
+    clockwise:
+      default: true
+      description: Direction of rotation (true for clockwise)
+      type: bool
+    radius:
+      constraints:
+        max: 100.0
+        min: 5.0
+        unit: m
+      default: 10.0
+      description: Circle radius in meters
+      type: float
+    speed:
+      constraints:
+        max: 15.0
+        min: 1.0
+        unit: m/s
+      default: 5.0
+      description: Flight speed in meters per second
+      type: float
+    turns:
+      constraints:
+        max: 10.0
+        min: 0.25
+        unit: revolutions
+      default: 1.0
+      description: Number of complete turns to make
+      type: float
   telemetry_feedback:
-    start: "Starting circular pattern with radius {radius}m"
-    success: "Completed circular pattern"
-    error: "Circle pattern failed: {error}"
+    error: 'Circle pattern failed: {error}'
+    start: Starting circular pattern with radius {radius}m
+    success: Completed circular pattern

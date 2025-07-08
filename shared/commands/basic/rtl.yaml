@@ -1,44 +1,63 @@
-# ===================================
 apiVersion: v1
 kind: DroneCommand
 metadata:
-  name: rtl
-  version: 1.0.0
   category: flight
-  tags: [basic, flight, return, safety]
+  critical: true
+  failsafe: land
+  max_retries: 1
+  name: rtl
+  tags:
+  - basic
+  - flight
+  - return
+  - safety
+  timeout_behavior: failsafe
+  version: 1.0.0
 spec:
   description:
-    brief: "Return to launch position"
-    detailed: |
-      Commands the drone to return to its launch position using the native PX4 RTL mode.
+    brief: Return to launch position
+    detailed: 'Commands the drone to return to its launch position using the native
+      PX4 RTL mode.
+
       The behavior depends on PX4 configuration but typically includes:
+
       - Climb to RTL altitude if needed
+
       - Fly to launch position
+
       - Land at launch position (if wait_for_landing=true)
-      
+
+
       Safety considerations:
+
       - Uses native PX4 RTL for maximum safety
+
       - Can be executed from most flight states
+
       - Automatic altitude management
+
       - Configurable landing behavior
+
+      '
+  implementation:
+    handler: dronesphere.commands.basic.rtl.RtlCommand
+    supported_backends:
+    - mavsdk
+    timeout: 150
   parameters:
     timeout:
-      type: float
-      default: 120.0
       constraints:
-        min: 30.0
         max: 600.0
-        unit: "s"
-      description: "Maximum time to wait for RTL completion"
+        min: 30.0
+        unit: s
+      default: 120.0
+      description: Maximum time to wait for RTL completion
+      type: float
     wait_for_landing:
-      type: bool
       default: true
-      description: "Wait for complete RTL sequence including landing"
-  implementation:
-    handler: "dronesphere.commands.basic.rtl.RtlCommand"
-    supported_backends: ["mavsdk"]
-    timeout: 150
+      description: Wait for complete RTL sequence including landing
+      type: bool
   telemetry_feedback:
-    start: "Returning to launch position..."
-    success: "RTL completed successfully"
-    error: "RTL failed: {error}"
+    error: 'RTL failed: {error}'
+    start: Returning to launch position...
+    success: RTL completed successfully

@@ -169,7 +169,11 @@ class TakeoffCommand(BaseCommand):
                     
                     current_altitude = 0.0
                     if telemetry and telemetry.position:
-                        current_altitude = telemetry.position.altitude_relative or 0.0
+                        # Use NED down coordinate for consistent altitude calculation
+                        if telemetry.position.down is not None:
+                            current_altitude = max(0.0, -telemetry.position.down)
+                        else:
+                            current_altitude = telemetry.position.altitude_relative or 0.0
                         
                     best_altitude = max(best_altitude, current_altitude)
                     
@@ -221,17 +225,7 @@ class TakeoffCommand(BaseCommand):
                           drone_id=backend.drone_id)
             return False, best_altitude
             
-        success, altitude = await self.wait_for_cancel_or_condition(
-            check_altitude_achieved(), timeout + 1
-        )
-        
-        if not success:
-            # Get final altitude reading
-            try:
-                telemetry = await backend.get_telemetry()
-                if telemetry and telemetry.position:
-                    altitude = telemetry.position.altitude_relative or 0.0
-            except:
-                pass
+        # Call check_altitude_achieved directly since it returns (bool, float)
+        success, altitude = await check_altitude_achieved()
                 
         return success, altitude
