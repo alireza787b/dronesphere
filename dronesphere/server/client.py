@@ -1,116 +1,132 @@
-"""HTTP client for testing and integration."""
+# server/client.py
+"""Server client for agent communication."""
 
-from typing import Dict, List, Optional
+import asyncio
+from typing import Any
 
 import httpx
 
-from ..core.models import (
-    APIResponse, CommandAcceptedResponse, CommandRequest, 
-    CommandSequence, DroneStatus, Telemetry
-)
+from dronesphere.core.logging import get_logger
+
+from .config import get_server_settings
+
+logger = get_logger(__name__)
 
 
-class DroneSphereClient:
-    """HTTP client for DroneSphere API."""
-    
-    def __init__(self, base_url: str = "http://localhost:8001", timeout: float = 30.0):
-        self.base_url = base_url.rstrip("/")
-        self.timeout = timeout
-        self.client = httpx.AsyncClient(timeout=timeout)
-        
-    async def close(self) -> None:
-        """Close the HTTP client."""
-        await self.client.aclose()
-        
-    async def health_check(self) -> APIResponse:
-        """Check API health."""
-        response = await self.client.get(f"{self.base_url}/health")
-        response.raise_for_status()
-        return APIResponse(**response.json())
-        
-    async def readiness_check(self) -> APIResponse:
-        """Check API readiness."""
-        response = await self.client.get(f"{self.base_url}/ready")
-        response.raise_for_status()
-        return APIResponse(**response.json())
-        
-    async def execute_command(
-        self, 
-        drone_id: int, 
-        sequence: List[CommandRequest]
-    ) -> CommandAcceptedResponse:
-        """Execute command sequence."""
-        command_sequence = CommandSequence(sequence=sequence)
-        
-        response = await self.client.post(
-            f"{self.base_url}/command/{drone_id}",
-            json=command_sequence.dict()
+class AgentClient:
+    """HTTP client for communicating with drone agents."""
+
+    def __init__(self):
+        self.settings = get_server_settings()
+        self.client: httpx.AsyncClient | None = None
+
+    async def start(self) -> None:
+        """Start the client."""
+        self.client = httpx.AsyncClient(
+            timeout=httpx.Timeout(self.settings.agent_timeout)
         )
-        response.raise_for_status()
-        return CommandAcceptedResponse(**response.json())
-        
-    async def get_drone_status(self, drone_id: int) -> DroneStatus:
-        """Get drone status."""
-        response = await self.client.get(f"{self.base_url}/status/{drone_id}")
-        response.raise_for_status()
-        return DroneStatus(**response.json())
-        
-    async def get_telemetry(self, drone_id: int) -> Telemetry:
-        """Get drone telemetry."""
-        response = await self.client.get(f"{self.base_url}/telemetry/{drone_id}")
-        response.raise_for_status()
-        return Telemetry(**response.json())
-        
-    async def get_command_queue(self, drone_id: int) -> APIResponse:
-        """Get command queue status."""
-        response = await self.client.get(f"{self.base_url}/queue/{drone_id}")
-        response.raise_for_status()
-        return APIResponse(**response.json())
-        
-    async def get_command_status(self, command_id: str) -> APIResponse:
-        """Get command execution status."""
-        response = await self.client.get(f"{self.base_url}/command/{command_id}/status")
-        response.raise_for_status()
-        return APIResponse(**response.json())
-        
-    async def emergency_stop(self, drone_id: int) -> APIResponse:
-        """Execute emergency stop."""
-        response = await self.client.post(f"{self.base_url}/emergency_stop/{drone_id}")
-        response.raise_for_status()
-        return APIResponse(**response.json())
-        
-    async def list_drones(self) -> APIResponse:
-        """List all drones."""
-        response = await self.client.get(f"{self.base_url}/drones")
-        response.raise_for_status()
-        return APIResponse(**response.json())
-        
-    # Convenience methods
-    async def takeoff(self, drone_id: int, altitude: float = 10.0) -> CommandAcceptedResponse:
-        """Execute takeoff command."""
-        sequence = [CommandRequest(name="takeoff", params={"altitude": altitude})]
-        return await self.execute_command(drone_id, sequence)
-        
-    async def land(self, drone_id: int) -> CommandAcceptedResponse:
-        """Execute land command."""
-        sequence = [CommandRequest(name="land")]
-        return await self.execute_command(drone_id, sequence)
-        
-    async def wait(self, drone_id: int, seconds: float) -> CommandAcceptedResponse:
-        """Execute wait command."""
-        sequence = [CommandRequest(name="wait", params={"seconds": seconds})]
-        return await self.execute_command(drone_id, sequence)
-        
-    async def takeoff_wait_land(
-        self, 
-        drone_id: int, 
-        altitude: float = 10.0, 
-        wait_time: float = 3.0
-    ) -> CommandAcceptedResponse:
-        """Execute complete takeoff → wait → land sequence."""
-        sequence = [
-            CommandRequest(name="takeoff", params={"altitude": altitude}),
-            CommandRequest(name="wait", params={"seconds": wait_time}),
-            CommandRequest(name="land")
-        ]
-        return await self.execute_command(drone_id, sequence)
+
+    async def stop(self) -> None:
+        """Stop the client."""
+        if self.client:
+            await self.client.aclose()
+            self.client = None
+
+    async def request_with_retry(
+        self, method: str, agent_host: str, agent_port: int, endpoint: str, **kwargs
+    ) -> dict[str, Any] | None:
+        """Make request to agent with retry logic."""
+        url = f"http://{agent_host}:{agent_port}{endpoint}"
+
+        for attempt in range(1, self.settings.retry_max_attempts + 1):
+            try:
+                response = await self.client.request(method, url, **kwargs)
+                response.raise_for_status()
+                return response.json()
+
+            except Exception as e:
+                # Only log warnings for actual failures, not timeouts during busy operations
+                if (
+                    "timeout" not in str(e).lower()
+                    and "connection" not in str(e).lower()
+                ):
+                    logger.warning(
+                        "agent_request_failed",
+                        agent=f"{agent_host}:{agent_port}",
+                        endpoint=endpoint,
+                        attempt=attempt,
+                        error=str(e),
+                    )
+                else:
+                    logger.debug(
+                        "agent_request_timeout",
+                        agent=f"{agent_host}:{agent_port}",
+                        endpoint=endpoint,
+                        attempt=attempt,
+                    )
+
+                if attempt < self.settings.retry_max_attempts:
+                    # Exponential backoff
+                    delay = self.settings.retry_backoff**attempt
+                    await asyncio.sleep(delay)
+                else:
+                    logger.error(
+                        "agent_request_exhausted",
+                        agent=f"{agent_host}:{agent_port}",
+                        endpoint=endpoint,
+                        max_attempts=self.settings.retry_max_attempts,
+                    )
+                    return None
+
+    async def ping_agent(self, agent_host: str, agent_port: int) -> bool:
+        """Ping agent to check connectivity."""
+        result = await self.request_with_retry("GET", agent_host, agent_port, "/ping")
+        return result is not None
+
+    async def get_agent_health(
+        self, agent_host: str, agent_port: int
+    ) -> dict[str, Any] | None:
+        """Get agent health status."""
+        return await self.request_with_retry("GET", agent_host, agent_port, "/health")
+
+    async def get_agent_status(
+        self, agent_host: str, agent_port: int
+    ) -> dict[str, Any] | None:
+        """Get agent status."""
+        return await self.request_with_retry("GET", agent_host, agent_port, "/status")
+
+    async def get_agent_telemetry(
+        self, agent_host: str, agent_port: int
+    ) -> dict[str, Any] | None:
+        """Get agent telemetry."""
+        return await self.request_with_retry(
+            "GET", agent_host, agent_port, "/telemetry"
+        )
+
+    async def send_command(
+        self, agent_host: str, agent_port: int, command_sequence: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """Send command to agent."""
+        return await self.request_with_retry(
+            "POST", agent_host, agent_port, "/commands", json=command_sequence
+        )
+
+    async def emergency_stop_agent(
+        self, agent_host: str, agent_port: int
+    ) -> dict[str, Any] | None:
+        """Send emergency stop to agent."""
+        return await self.request_with_retry(
+            "POST", agent_host, agent_port, "/emergency_stop"
+        )
+
+    async def get_agent_history(
+        self, agent_host: str, agent_port: int, limit: int = 50, offset: int = 0
+    ) -> dict[str, Any] | None:
+        """Get agent command history."""
+        return await self.request_with_retry(
+            "GET",
+            agent_host,
+            agent_port,
+            "/history",
+            params={"limit": limit, "offset": offset},
+        )

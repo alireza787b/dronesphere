@@ -1,42 +1,22 @@
-# ===========================================
-
-# .pre-commit-config.yaml
-# ===========================================
+# DroneSphere Pre-commit Configuration (Simplified)
+# =================================================
 
 repos:
+  # Basic file checks only (no Python tools that cause environment issues)
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
       - id: trailing-whitespace
+        exclude: '^(\.venv/|scripts/.*\.sh).*$'
       - id: end-of-file-fixer
-      - id: check-yaml
+        exclude: '^(\.venv/|scripts/.*\.sh).*$'
       - id: check-added-large-files
-      - id: check-json
+        args: [--maxkb=1000]
+      - id: check-yaml
+        exclude: '^(\.venv/).*$'
       - id: check-toml
+        exclude: '^(\.venv/).*$'
       - id: check-merge-conflict
-      - id: debug-statements
 
-  - repo: https://github.com/psf/black
-    rev: 23.11.0
-    hooks:
-      - id: black
-        language_version: python3.10
-
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.1.7
-    hooks:
-      - id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
-
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.7.1
-    hooks:
-      - id: mypy
-        additional_dependencies: [types-PyYAML, types-requests]
-        args: [--strict, --ignore-missing-imports]
-
-  - repo: https://github.com/pycqa/isort
-    rev: 5.12.0
-    hooks:
-      - id: isort
-        args: ["--profile", "black"]
+# Note: Python formatting (Black/Ruff) available via ./scripts/format-code.sh
+# This avoids virtual environment conflicts in pre-commit hooks

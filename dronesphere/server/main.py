@@ -1,79 +1,57 @@
-"""Server main entry point."""
+"""Server main module - multi-drone coordination.
+
+This module provides the main server entry point for the DroneSphere coordination
+service, handling fleet management, telemetry caching, and multi-drone operations.
+"""
 
 import asyncio
 import signal
-import sys
 
 import uvicorn
 
-from ..agent.main import get_agent
-from ..core.config import get_settings
-from ..core.logging import get_logger, setup_logging
+from dronesphere.commands.registry import load_command_library
+from dronesphere.core.logging import get_logger
+
+from .api import app
+from .config import get_server_settings
 
 logger = get_logger(__name__)
 
 
-async def start_server_with_agent():
-    """Start server with embedded agent."""
-    # Setup logging
-    settings = get_settings()
-    setup_logging(level=settings.logging.level, log_format=settings.logging.format)
-    
-    logger.info("server_starting_with_agent",
-               host=settings.server.host,
-               port=settings.server.port)
-    
-    # Start agent
-    agent = get_agent()
-    
+async def main():
+    """Server entry point."""
+    settings = get_server_settings()
+
+    logger.info("server_starting", port=settings.port)
+
     try:
-        # Start agent in background
-        await agent.start()
-        
-        # Give agent time to initialize
-        await asyncio.sleep(2.0)
-        
-        # Start server
-        config = uvicorn.Config(
-            "dronesphere.server.api:app",
-            host=settings.server.host,
-            port=settings.server.port,
-            log_level=settings.logging.level.lower(),
-            reload=settings.debug,
-            access_log=False,  # We handle our own logging
-        )
-        
-        server = uvicorn.Server(config)
-        
-        # Setup graceful shutdown
-        def signal_handler(sig, frame):
-            logger.info("shutdown_signal_received", signal=sig)
-            agent.signal_shutdown()
-            
-        signal.signal(signal.SIGINT, signal_handler)
-        signal.signal(signal.SIGTERM, signal_handler)
-        
+        # Load command library for validation
+        load_command_library()
+
+        # Setup signal handlers
+        def signal_handler():
+            logger.info("shutdown_signal_received")
+
+        signal.signal(signal.SIGINT, lambda s, f: signal_handler())
+        signal.signal(signal.SIGTERM, lambda s, f: signal_handler())
+
         # Run server
+        config = uvicorn.Config(
+            app,
+            host=settings.host,
+            port=settings.port,
+            log_level="info",
+            access_log=True,
+        )
+
+        server = uvicorn.Server(config)
         await server.serve()
-        
-    except Exception as e:
-        logger.error("server_failed", error=str(e))
-        raise
-    finally:
-        # Shutdown agent
-        await agent.shutdown()
 
-
-def main():
-    """Main entry point for the server."""
-    try:
-        asyncio.run(start_server_with_agent())
     except KeyboardInterrupt:
-        logger.info("server_interrupted")
+        logger.info("keyboard_interrupt")
     except Exception as e:
-        logger.error("server_main_failed", error=str(e))
-        sys.exit(1)
+        logger.error("server_main_error", error=str(e))
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

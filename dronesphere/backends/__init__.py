@@ -9,7 +9,7 @@ from .pymavlink import PyMavlinkBackend
 
 __all__ = [
     "AbstractBackend",
-    "TelemetryProvider", 
+    "TelemetryProvider",
     "MavsdkBackend",
     "MavsdkTelemetryProvider",
     "PyMavlinkBackend",
