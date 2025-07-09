@@ -1,0 +1,40 @@
+# shared/config/telemetry.yaml
+# ===================================
+# Telemetry configuration
+
+telemetry:
+  update_rate: 4.0  # Hz (4 times per second)
+  
+  fields:
+    essential:
+      - "position"
+      - "attitude" 
+      - "velocity"
+      - "battery"
+      - "gps"
+      - "flight_mode"
+      - "armed_status"
+      
+    extended:
+      - "vibration"
+      - "temperature"
+      - "pressure"
+      - "wind_estimation"
+      - "actuator_outputs"
+      
+  storage:
+    enabled: false  # Future: time-series database
+    retention_days: 30
+    compression: true
+    
+  streaming:
+    enabled: true
+    protocols: ["websocket", "sse"]  # websocket, sse, mqtt
+    buffer_size: 1000
+    
+  alerts:
+    enabled: true
+    thresholds:
+      low_battery: 20.0  # percent
+      high_vibration: 5.0  # m/s²
+      gps_loss: 30.0  # seconds

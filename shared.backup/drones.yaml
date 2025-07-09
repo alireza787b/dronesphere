@@ -1,0 +1,41 @@
+# Enhanced drone configuration with agent network details
+drones:
+  - id: 1
+    name: "Primary Drone"
+    type: "px4_sitl"
+    agent:
+      host: "127.0.0.1"        # Agent IP (localhost for SITL)
+      port: 8001               # Agent API port
+      timeout: 10.0            # Agent communication timeout
+    gcs:                       # Ground Control Station (optional)
+      host: "127.0.0.1"        # Server IP
+      port: 8002               # Server API port
+    hardware:
+      protocol: "udp"
+      address: "127.0.0.1"
+      port: 14540
+    capabilities:
+      - "takeoff"
+      - "land" 
+      - "wait"
+      - "goto"
+      - "circle"
+    limits:
+      max_altitude: 50.0
+      max_speed: 15.0
+      max_range: 1000.0
+    safety:
+      geofence_enabled: true
+      failsafe_enabled: true
+      emergency_land_enabled: true
+
+# Future multi-drone example
+# - id: 2
+#   name: "Secondary Drone"  
+#   agent:
+#     host: "192.168.1.101"
+#     port: 8001
+#   hardware:
+#     protocol: "udp"
+#     address: "192.168.1.101"
+#     port: 14540

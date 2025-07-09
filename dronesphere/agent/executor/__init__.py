@@ -4,7 +4,7 @@ This package contains the core execution components for the DroneSphere agent,
 including the command runner and drone connection management.
 """
 
-from .runner import CommandRunner
 from .connection import DroneConnection
+from .runner import CommandRunner
 
 __all__ = ["CommandRunner", "DroneConnection"]

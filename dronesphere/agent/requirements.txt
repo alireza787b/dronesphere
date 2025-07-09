@@ -1,0 +1,29 @@
+# DroneSphere Agent - Hardware-Optimized Dependencies
+# ===================================================
+
+# Core web framework (lightweight)
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# Data models
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Drone communication (essential)
+mavsdk>=3.6.0
+pymavlink>=2.4.47
+
+# Logging (lightweight)
+structlog>=23.2.0
+
+# Configuration
+pyyaml>=6.0.1
+
+# HTTP client (for server communication)
+httpx>=0.25.0
+
+# Development dependencies (minimal)
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+black>=23.11.0
+ruff>=0.1.7

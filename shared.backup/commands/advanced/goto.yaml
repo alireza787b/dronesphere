@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: DroneCommand
+metadata:
+  category: navigation
+  critical: false
+  max_retries: 0
+  name: goto
+  tags:
+  - navigation
+  - offboard
+  - local
+  - velocity-controlled
+  timeout_behavior: continue
+  version: 1.1.0
+spec:
+  description:
+    brief: Fly to local NED coordinates with velocity control
+    detailed: "Commands the drone to fly to specified local NED (North, East, Down)\
+      \ coordinates\nusing MAVSDK offboard mode with configurable speed control and\
+      \ movement verification.\n\nEnhanced Features:\n- Real position verification\
+      \ using mavlink2rest\n- Configurable maximum speed and approach speed\n- Movement\
+      \ detection to verify drone actually moves\n- Detailed progress logging\n\n\
+      Coordinate system:\n- North: positive values = north direction (meters)\n- East:\
+      \ positive values = east direction (meters)  \n- Down: negative values = altitude\
+      \ (e.g., down=-5 = 5m altitude)\n- Yaw: heading in degrees (0 = north)\n\nSafety\
+      \ considerations:\n- Drone must be flying before executing goto\n- Uses offboard\
+      \ mode for precise positioning\n- Speed limits prevent aggressive movements\n\
+      - Position tolerance checking for completion\n- Movement verification detects\
+      \ if drone actually moves\n"
+  implementation:
+    handler: dronesphere.commands.navigation.goto.GotoCommand
+    supported_backends:
+    - mavsdk
+    timeout: 90
+  parameters:
+    approach_speed:
+      constraints:
+        max: 2.0
+        min: 0.1
+        unit: m/s
+      default: 0.5
+      description: Speed when approaching target (for precision)
+      type: float
+    down:
+      constraints:
+        max: 10.0
+        min: -100.0
+        unit: m
+      default: -5.0
+      description: Down coordinate in meters (negative = altitude, e.g., -5 = 5m high)
+      type: float
+    east:
+      constraints:
+        max: 1000.0
+        min: -1000.0
+        unit: m
+      default: 0.0
+      description: East coordinate in meters (positive = east)
+      type: float
+    max_speed:
+      constraints:
+        max: 10.0
+        min: 0.5
+        unit: m/s
+      default: 2.0
+      description: Maximum horizontal speed during movement
+      type: float
+    north:
+      constraints:
+        max: 1000.0
+        min: -1000.0
+        unit: m
+      default: 0.0
+      description: North coordinate in meters (positive = north)
+      type: float
+    timeout:
+      constraints:
+        max: 300.0
+        min: 10.0
+        unit: s
+      default: 60.0
+      description: Maximum time to wait for position reached
+      type: float
+    tolerance:
+      constraints:
+        max: 10.0
+        min: 0.5
+        unit: m
+      default: 2.0
+      description: Position tolerance for completion (meters)
+      type: float
+    yaw:
+      constraints:
+        max: 180.0
+        min: -180.0
+        unit: deg
+      default: 0.0
+      description: Target heading in degrees (0 = north, 90 = east)
+      type: float
+  telemetry_feedback:
+    error: 'Goto failed: {error}'
+    start: Flying to position N:{north}m E:{east}m D:{down}m at max {max_speed}m/s...
+    success: Reached target position within {tolerance}m

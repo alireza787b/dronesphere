@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: DroneCommand
+metadata:
+  category: flight
+  critical: true
+  failsafe: land
+  max_retries: 1
+  name: takeoff
+  tags:
+  - basic
+  - flight
+  timeout_behavior: failsafe
+  version: 1.0.0
+spec:
+  description:
+    brief: Take off to specified altitude
+    detailed: 'Commands the drone to arm and take off to the specified altitude.
+
+      The drone will hover at the target altitude until the next command.
+
+      '
+  implementation:
+    handler: dronesphere.commands.basic.takeoff.TakeoffCommand
+    supported_backends:
+    - mavsdk
+    timeout: 60
+  parameters:
+    altitude:
+      constraints:
+        max: 50.0
+        min: 1.0
+        unit: m
+      default: 10.0
+      description: Target altitude in meters above ground level
+      type: float
+    altitude_tolerance:
+      constraints:
+        max: 5.0
+        min: 0.1
+      default: 1.0
+      description: Altitude tolerance (fraction of target altitude to accept as success)
+      type: float
+    timeout:
+      constraints:
+        max: 60.0
+        min: 5.0
+        unit: s
+      default: 20.0
+      description: Maximum time to wait for takeoff completion
+      type: float
+  telemetry_feedback:
+    error: 'Takeoff failed: {error}'
+    start: Taking off to {altitude} meters...
+    success: Successfully reached {altitude} meters

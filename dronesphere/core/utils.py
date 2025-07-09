@@ -4,7 +4,8 @@
 """Core utilities."""
 
 import asyncio
-from typing import Any, Awaitable, Callable, Optional, TypeVar
+from collections.abc import Awaitable
+from typing import Any, TypeVar
 
 from .logging import get_logger
 
@@ -14,9 +15,7 @@ T = TypeVar("T")
 
 
 async def run_with_timeout(
-    coro: Awaitable[T], 
-    timeout: float,
-    timeout_message: Optional[str] = None
+    coro: Awaitable[T], timeout: float, timeout_message: str | None = None
 ) -> T:
     """Run coroutine with timeout."""
     try:

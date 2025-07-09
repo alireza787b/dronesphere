@@ -1,6 +1,7 @@
 """Agent package entry point."""
 
 import asyncio
+
 from .main import main
 
 if __name__ == "__main__":
