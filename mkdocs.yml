@@ -4,10 +4,10 @@
 site_name: DroneSphere Documentation
 site_description: Scalable drone command and control system
 site_author: DroneSphere Team
-site_url: https://yourusername.github.io/dronesphere
+site_url: https://alireza787b.github.io/dronesphere
 
-repo_name: yourusername/dronesphere
-repo_url: https://github.com/yourusername/dronesphere
+repo_name: alireza787b/dronesphere
+repo_url: https://github.com/alireza787b/dronesphere
 edit_uri: edit/main/docs/
 
 theme:

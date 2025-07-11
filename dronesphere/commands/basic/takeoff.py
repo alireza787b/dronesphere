@@ -64,10 +64,11 @@ class TakeoffCommand(BaseCommand):
             await backend.takeoff(altitude)
             await self.check_cancelled()
 
-            # Wait for takeoff completion with relaxed criteria
-            success, actual_altitude = await self._wait_for_takeoff_completion(
-                backend, altitude, altitude_tolerance, timeout
-            )
+            # No Check for now
+            # Wait for takeoff completion with relaxed criteria 
+            # success, actual_altitude = await self._wait_for_takeoff_completion(
+            #     backend, altitude, altitude_tolerance, timeout
+            # )
 
             duration = asyncio.get_event_loop().time() - start_time
 

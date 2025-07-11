@@ -12,6 +12,7 @@ pydantic-settings>=2.1.0
 # Drone communication (for validation)
 mavsdk>=3.6.0
 pymavlink>=2.4.47
+pymap3d
 
 # HTTP clients
 httpx>=0.25.0

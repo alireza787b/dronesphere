@@ -36,7 +36,7 @@ curl -X POST localhost:8002/drones/1/commands \
   -d '{
     "sequence": [
       {"name": "takeoff", "params": {"altitude": 10.0}},
-      {"name": "goto", "params": {"latitude": -35.36, "longitude": 149.16, "altitude": 10.0}},
+      {"name": "goto", "params": {"north": 10.0, "east": 5, "down": -10.0}},
       {"name": "wait", "params": {"duration": 5.0}},
       {"name": "land", "params": {}}
     ]

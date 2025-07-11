@@ -13,7 +13,7 @@ import asyncio
 from mavsdk import System
 from mavsdk.offboard import PositionNedYaw
 from mavsdk.action import OrbitYawBehavior
-
+from .orbit_extension import OrbitMixin
 
 from ..core.errors import BackendError, DroneConnectionError
 from ..core.logging import get_logger
@@ -38,7 +38,7 @@ except ImportError:
     HAS_PYMAP3D = False
     logger.warning("pymap3d not available - global coordinate conversion disabled")
 
-class MavsdkBackend(AbstractBackend):
+class MavsdkBackend(AbstractBackend, OrbitMixin):
     """MAVSDK implementation with WORKING local NED position telemetry."""
 
     def __init__(self, drone_id: int, connection_string: str):
@@ -485,6 +485,233 @@ class MavsdkBackend(AbstractBackend):
                 connection_ok=False,
             )
             
+    async def orbit_at_global_position(
+        self,
+        center_lat: float,
+        center_lon: float, 
+        altitude_msl: float,
+        radius: float,
+        velocity: float,
+        yaw_behavior: OrbitYawBehavior = OrbitYawBehavior.HOLD_FRONT_TO_CIRCLE_CENTER
+    ) -> None:
+        """Execute orbit using MAVSDK do_orbit with global coordinates.
+        
+        Args:
+            center_lat: Center latitude in degrees
+            center_lon: Center longitude in degrees  
+            altitude_msl: Altitude above mean sea level in meters
+            radius: Orbit radius in meters (positive)
+            velocity: Orbit velocity in m/s (positive=clockwise, negative=counter-clockwise)
+            yaw_behavior: Yaw behavior during orbit
+        """
+        try:
+            logger.info(
+                "orbit_at_global_position",
+                drone_id=self.drone_id,
+                center_lat=center_lat,
+                center_lon=center_lon,
+                altitude_msl=altitude_msl,
+                radius=radius,
+                velocity=velocity,
+                yaw_behavior=yaw_behavior.name,
+            )
+            
+            # Validate parameters
+            if radius <= 0:
+                raise BackendError("Orbit radius must be positive")
+            if abs(velocity) < 0.1:
+                raise BackendError("Orbit velocity must be at least 0.1 m/s")
+            if altitude_msl < 0:
+                raise BackendError("Altitude MSL cannot be negative")
+                
+            # Execute orbit command via MAVSDK Action
+            result = await self.drone.action.do_orbit(
+                radius_m=float(radius),
+                velocity_ms=float(velocity),
+                yaw_behavior=yaw_behavior,
+                latitude_deg=float(center_lat),
+                longitude_deg=float(center_lon), 
+                absolute_altitude_m=float(altitude_msl)
+            )
+            
+            # Check if orbit command was accepted
+            if hasattr(result, 'result') and result.result != result.Result.SUCCESS:
+                raise BackendError(f"Orbit command failed: {result.result}")
+                
+            logger.info(
+                "orbit_command_sent",
+                drone_id=self.drone_id,
+                result="success"
+            )
+            
+        except Exception as e:
+            logger.error(
+                "orbit_command_failed", 
+                drone_id=self.drone_id,
+                error=str(e)
+            )
+            raise BackendError(f"Failed to execute orbit: {e}")
+
+    async def orbit_at_local_position(
+        self,
+        center_north: float,
+        center_east: float,
+        altitude_relative: float,
+        radius: float,
+        velocity: float,
+        yaw_behavior: OrbitYawBehavior = OrbitYawBehavior.HOLD_FRONT_TO_CIRCLE_CENTER
+    ) -> None:
+        """Execute orbit using local NED coordinates (converts to global).
+        
+        Args:
+            center_north: Center north coordinate in meters (NED)
+            center_east: Center east coordinate in meters (NED)
+            altitude_relative: Relative altitude in meters (positive = above ground)
+            radius: Orbit radius in meters (positive)
+            velocity: Orbit velocity in m/s (positive=clockwise, negative=counter-clockwise)
+            yaw_behavior: Yaw behavior during orbit
+        """
+        try:
+            logger.info(
+                "orbit_at_local_position",
+                drone_id=self.drone_id,
+                center_north=center_north,
+                center_east=center_east,
+                altitude_relative=altitude_relative,
+                radius=radius,
+                velocity=velocity,
+                yaw_behavior=yaw_behavior.name,
+            )
+            
+            # Get current GPS position for coordinate conversion
+            telemetry = await self.get_telemetry()
+            if not telemetry or not telemetry.position:
+                raise BackendError("Current position not available for coordinate conversion")
+                
+            current_pos = telemetry.position
+            if (current_pos.latitude is None or current_pos.longitude is None or 
+                current_pos.altitude_msl is None):
+                raise BackendError("GPS position not available for coordinate conversion")
+            
+            # Convert NED to Global coordinates
+            if HAS_PYMAP3D:
+                # Use pymap3d for accurate conversion
+                center_lat, center_lon, center_alt_msl = pm3d.ned2geodetic(
+                    center_north, center_east, -altitude_relative,  # NED down is negative altitude
+                    current_pos.latitude, current_pos.longitude, current_pos.altitude_msl
+                )
+                
+                logger.info(
+                    "ned_to_global_conversion",
+                    drone_id=self.drone_id,
+                    ned_input={"north": center_north, "east": center_east, "alt_rel": altitude_relative},
+                    global_output={"lat": center_lat, "lon": center_lon, "alt_msl": center_alt_msl},
+                    reference_point={"lat": current_pos.latitude, "lon": current_pos.longitude, "alt": current_pos.altitude_msl}
+                )
+            else:
+                # Simple approximation (less accurate, but works without pymap3d)
+                # 1 degree lat ≈ 111,000m, 1 degree lon ≈ 111,000m * cos(lat)
+                import math
+                
+                lat_deg_per_m = 1.0 / 111320.0  # approximate
+                lon_deg_per_m = 1.0 / (111320.0 * math.cos(math.radians(current_pos.latitude)))
+                
+                center_lat = current_pos.latitude + (center_north * lat_deg_per_m)
+                center_lon = current_pos.longitude + (center_east * lon_deg_per_m) 
+                center_alt_msl = current_pos.altitude_msl + altitude_relative
+                
+                logger.warning(
+                    "simple_coordinate_conversion",
+                    drone_id=self.drone_id,
+                    note="Using approximate conversion - install pymap3d for accuracy",
+                    ned_input={"north": center_north, "east": center_east, "alt_rel": altitude_relative},
+                    global_output={"lat": center_lat, "lon": center_lon, "alt_msl": center_alt_msl}
+                )
+            
+            # Execute orbit using global coordinates
+            await self.orbit_at_global_position(
+                center_lat=center_lat,
+                center_lon=center_lon,
+                altitude_msl=center_alt_msl,
+                radius=radius,
+                velocity=velocity,
+                yaw_behavior=yaw_behavior
+            )
+            
+        except Exception as e:
+            logger.error(
+                "orbit_local_failed",
+                drone_id=self.drone_id, 
+                error=str(e)
+            )
+            raise BackendError(f"Failed to execute local orbit: {e}")
+
+    async def get_current_global_position(self) -> tuple[float, float, float]:
+        """Get current global position (lat, lon, altitude_msl).
+        
+        Returns:
+            Tuple of (latitude, longitude, altitude_msl)
+            
+        Raises:
+            BackendError: If position not available
+        """
+        telemetry = await self.get_telemetry()
+        if not telemetry or not telemetry.position:
+            raise BackendError("Current telemetry not available")
+            
+        pos = telemetry.position
+        if pos.latitude is None or pos.longitude is None or pos.altitude_msl is None:
+            raise BackendError("GPS position not available")
+            
+        return pos.latitude, pos.longitude, pos.altitude_msl
+
+    async def get_current_local_position(self) -> tuple[float, float, float]:
+        """Get current local NED position (north, east, down).
+        
+        Returns:
+            Tuple of (north, east, down) in meters
+            
+        Raises:
+            BackendError: If position not available
+        """
+        telemetry = await self.get_telemetry()
+        if not telemetry or not telemetry.position:
+            raise BackendError("Current telemetry not available")
+            
+        pos = telemetry.position
+        if pos.north is None or pos.east is None or pos.down is None:
+            raise BackendError("Local NED position not available")
+            
+        return pos.north, pos.east, pos.down
+
+    # Helper function to convert yaw behavior strings to MAVSDK enums
+    def get_orbit_yaw_behavior(behavior_str: str) -> OrbitYawBehavior:
+        """Convert string yaw behavior to MAVSDK OrbitYawBehavior enum.
+        
+        Args:
+            behavior_str: String representation of yaw behavior
+            
+        Returns:
+            OrbitYawBehavior enum value
+            
+        Raises:
+            ValueError: If behavior string is invalid
+        """
+        behavior_map = {
+            "face_center": OrbitYawBehavior.HOLD_FRONT_TO_CIRCLE_CENTER,
+            "hold_heading": OrbitYawBehavior.HOLD_INITIAL_HEADING,
+            "uncontrolled": OrbitYawBehavior.UNCONTROLLED,
+            "face_tangent": OrbitYawBehavior.HOLD_FRONT_TANGENT_TO_CIRCLE,
+            "rc_controlled": OrbitYawBehavior.RC_CONTROLLED,
+        }
+        
+        if behavior_str not in behavior_map:
+            valid_options = ", ".join(behavior_map.keys())
+            raise ValueError(f"Invalid yaw behavior '{behavior_str}'. Valid options: {valid_options}")
+            
+        return behavior_map[behavior_str]        
+                
+
     async def _wait_for_altitude(
         self, target_altitude: float, timeout: float = 30.0
     ) -> None:
@@ -558,182 +785,3 @@ class MavsdkTelemetryProvider(TelemetryProvider):
         backend.drone = self.drone
         backend._connected = self._connected
         return await backend.get_telemetry()
-
-    # =============================================================================
-    # ORBIT FUNCTIONALITY - Clean integration without mixins
-    # =============================================================================
-    
-    async def orbit_at_global_position(
-        self,
-        center_lat: float,
-        center_lon: float, 
-        altitude_msl: float,
-        radius: float,
-        velocity: float,
-        yaw_behavior_str: str = "face_center"
-    ) -> None:
-        """Execute orbit using MAVSDK do_orbit with global coordinates.
-        
-        Args:
-            center_lat: Center latitude in degrees
-            center_lon: Center longitude in degrees  
-            altitude_msl: Altitude above mean sea level in meters
-            radius: Orbit radius in meters (positive)
-            velocity: Orbit velocity in m/s (positive=clockwise, negative=counter-clockwise)
-            yaw_behavior_str: Yaw behavior as string (converted to MAVSDK enum)
-        """
-        try:
-            # Import orbit dependencies
-            from .orbit_extension import get_orbit_yaw_behavior
-            
-            # Convert string to MAVSDK enum
-            yaw_behavior = get_orbit_yaw_behavior(yaw_behavior_str)
-            
-            logger.info(
-                "orbit_at_global_position",
-                drone_id=self.drone_id,
-                center_lat=center_lat,
-                center_lon=center_lon,
-                altitude_msl=altitude_msl,
-                radius=radius,
-                velocity=velocity,
-                yaw_behavior=yaw_behavior_str,
-            )
-            
-            # Validate parameters
-            if radius <= 0:
-                raise BackendError("Orbit radius must be positive")
-            if abs(velocity) < 0.1:
-                raise BackendError("Orbit velocity must be at least 0.1 m/s")
-            if altitude_msl < 0:
-                raise BackendError("Altitude MSL cannot be negative")
-                
-            # Execute orbit command via MAVSDK Action
-            result = await self.drone.action.do_orbit(
-                radius_m=float(radius),
-                velocity_ms=float(velocity),
-                yaw_behavior=yaw_behavior,
-                latitude_deg=float(center_lat),
-                longitude_deg=float(center_lon), 
-                absolute_altitude_m=float(altitude_msl)
-            )
-            
-            logger.info(
-                "orbit_command_sent",
-                drone_id=self.drone_id,
-                result="success"
-            )
-            
-        except Exception as e:
-            logger.error(
-                "orbit_command_failed", 
-                drone_id=self.drone_id,
-                error=str(e)
-            )
-            raise BackendError(f"Failed to execute orbit: {e}")
-
-    async def orbit_at_local_position(
-        self,
-        center_north: float,
-        center_east: float,
-        altitude_relative: float,
-        radius: float,
-        velocity: float,
-        yaw_behavior_str: str = "face_center"
-    ) -> None:
-        """Execute orbit using local NED coordinates (converts to global).
-        
-        Args:
-            center_north: Center north coordinate in meters (NED)
-            center_east: Center east coordinate in meters (NED)
-            altitude_relative: Relative altitude in meters (positive = above ground)
-            radius: Orbit radius in meters (positive)
-            velocity: Orbit velocity in m/s (positive=clockwise, negative=counter-clockwise)
-            yaw_behavior_str: Yaw behavior as string
-        """
-        try:
-            # Import coordinate conversion utilities  
-            from .orbit_extension import convert_ned_to_global
-            
-            logger.info(
-                "orbit_at_local_position",
-                drone_id=self.drone_id,
-                center_north=center_north,
-                center_east=center_east,
-                altitude_relative=altitude_relative,
-                radius=radius,
-                velocity=velocity,
-            )
-            
-            # Get current position for conversion
-            telemetry = await self.get_telemetry()
-            if not telemetry or not telemetry.position:
-                raise BackendError("Current position not available for coordinate conversion")
-                
-            current_pos = telemetry.position
-            if (current_pos.latitude is None or current_pos.longitude is None or 
-                current_pos.altitude_msl is None):
-                raise BackendError("GPS position not available for coordinate conversion")
-            
-            # Convert NED to Global coordinates using utility function
-            center_lat, center_lon, center_alt_msl = convert_ned_to_global(
-                center_north, center_east, altitude_relative,
-                current_pos.latitude, current_pos.longitude, current_pos.altitude_msl,
-                drone_id=self.drone_id
-            )
-            
-            # Execute orbit using global coordinates
-            await self.orbit_at_global_position(
-                center_lat=center_lat,
-                center_lon=center_lon,
-                altitude_msl=center_alt_msl,
-                radius=radius,
-                velocity=velocity,
-                yaw_behavior_str=yaw_behavior_str
-            )
-            
-        except Exception as e:
-            logger.error(
-                "orbit_local_failed",
-                drone_id=self.drone_id, 
-                error=str(e)
-            )
-            raise BackendError(f"Failed to execute local orbit: {e}")
-
-    async def get_current_global_position(self) -> tuple[float, float, float]:
-        """Get current global position (lat, lon, altitude_msl).
-        
-        Returns:
-            Tuple of (latitude, longitude, altitude_msl)
-            
-        Raises:
-            BackendError: If position not available
-        """
-        telemetry = await self.get_telemetry()
-        if not telemetry or not telemetry.position:
-            raise BackendError("Current telemetry not available")
-            
-        pos = telemetry.position
-        if pos.latitude is None or pos.longitude is None or pos.altitude_msl is None:
-            raise BackendError("GPS position not available")
-            
-        return pos.latitude, pos.longitude, pos.altitude_msl
-
-    async def get_current_local_position(self) -> tuple[float, float, float]:
-        """Get current local NED position (north, east, down).
-        
-        Returns:
-            Tuple of (north, east, down) in meters
-            
-        Raises:
-            BackendError: If position not available
-        """
-        telemetry = await self.get_telemetry()
-        if not telemetry or not telemetry.position:
-            raise BackendError("Current telemetry not available")
-            
-        pos = telemetry.position
-        if pos.north is None or pos.east is None or pos.down is None:
-            raise BackendError("Local NED position not available")
-            
-        return pos.north, pos.east, pos.down

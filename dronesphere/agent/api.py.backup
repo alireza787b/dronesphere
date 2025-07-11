@@ -233,17 +233,7 @@ async def get_telemetry():
                 detail="Drone not connected",
             )
 
-        # EXPERT FIX: Add timeout and better error handling
-        try:
-            telemetry = await asyncio.wait_for(
-                agent.connection.get_telemetry(), 
-                timeout=3.0  # 3 second timeout
-            )
-        except asyncio.TimeoutError:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Telemetry timeout - backend may be busy",
-            )
+        telemetry = await agent.connection.get_telemetry()
 
         if not telemetry:
             raise HTTPException(
