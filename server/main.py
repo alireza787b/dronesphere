@@ -5,10 +5,11 @@ This service routes commands to individual drone agents.
 
 Path: server/main.py
 """
-import uvicorn
-import sys
 import os
+import sys
 from pathlib import Path
+
+import uvicorn
 
 # Add project root to Python path
 project_root = Path(__file__).parent.parent
@@ -24,14 +25,8 @@ def main():
     print("🔧 Fleet health: http://localhost:8002/fleet/health")
     print("🎯 Fleet commands: http://localhost:8002/fleet/commands")
     print("-" * 50)
-    
-    uvicorn.run(
-        app, 
-        host="0.0.0.0", 
-        port=8002,
-        log_level="info",
-        access_log=True
-    )
+
+    uvicorn.run(app, host="0.0.0.0", port=8002, log_level="info", access_log=True)
 
 
 if __name__ == "__main__":

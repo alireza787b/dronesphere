@@ -5,15 +5,13 @@ Handles command sequence execution with proper error handling and safety feature
 """
 import asyncio
 import time
-from typing import Any, Dict, List, Optional
-
-from shared.models import Command, CommandMode, CommandResult
-
+from typing import List, Dict, Any, Optional
+from shared.models import Command, CommandResult, CommandMode
 from .commands.base import BaseCommand
-from .commands.goto import GotoCommand
+from .commands.takeoff import TakeoffCommand
 from .commands.land import LandCommand
 from .commands.rtl import RTLCommand
-from .commands.takeoff import TakeoffCommand
+from .commands.goto import GotoCommand
 from .commands.wait import WaitCommand
 
 
@@ -32,7 +30,7 @@ class CommandExecutor:
             "land": LandCommand,
             "rtl": RTLCommand,
             "goto": GotoCommand,
-            "wait": WaitCommand,
+            "wait": WaitCommand
         }
         self.current_sequence = []
         self.executing = False
@@ -64,7 +62,7 @@ class CommandExecutor:
                     result = CommandResult(
                         success=False,
                         message=f"Unknown command: {cmd.name}",
-                        error="unknown_command",
+                        error="unknown_command"
                     )
                     results.append(result)
 
@@ -106,7 +104,9 @@ class CommandExecutor:
                 except Exception as e:
                     print(f"💥 Command {cmd.name} threw exception: {str(e)}")
                     result = CommandResult(
-                        success=False, message=f"Command execution error: {str(e)}", error=str(e)
+                        success=False,
+                        message=f"Command execution error: {str(e)}",
+                        error=str(e)
                     )
                     results.append(result)
 

@@ -1,0 +1,32 @@
+# Simple pre-commit configuration for DroneSphere
+# Auto-fixes issues, minimal checks, non-annoying
+
+repos:
+  # Basic file cleanup (auto-fixes)
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace        # Auto-fix trailing spaces
+      - id: end-of-file-fixer         # Auto-fix file endings
+      - id: check-yaml                # Basic YAML validation
+      - id: check-added-large-files   # Prevent >500kb files
+        args: ['--maxkb=500']
+
+  # Python auto-formatting (non-intrusive)
+  - repo: https://github.com/psf/black
+    rev: 23.3.0
+    hooks:
+      - id: black
+        args: [--line-length=100, --skip-string-normalization]
+
+  # Import sorting (auto-fix)
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        args: [--profile=black, --line-length=100]
+
+# Configuration
+default_stages: [pre-commit]  # Fixed deprecation warning
+fail_fast: false             # Don't stop on first failure
+minimum_pre_commit_version: 2.20.0

@@ -5,10 +5,11 @@ This service runs on individual drones or Raspberry Pi units.
 
 Path: agent/main.py
 """
-import uvicorn
-import sys
 import os
+import sys
 from pathlib import Path
+
+import uvicorn
 
 # Add project root to Python path
 project_root = Path(__file__).parent.parent
@@ -24,14 +25,8 @@ def main():
     print("�� Health check: http://localhost:8001/health")
     print("📊 Detailed health: http://localhost:8001/health/detailed")
     print("-" * 50)
-    
-    uvicorn.run(
-        app, 
-        host="0.0.0.0", 
-        port=8001,
-        log_level="info",
-        access_log=True
-    )
+
+    uvicorn.run(app, host="0.0.0.0", port=8001, log_level="info", access_log=True)
 
 
 if __name__ == "__main__":
