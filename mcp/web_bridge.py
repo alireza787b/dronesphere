@@ -245,8 +245,8 @@ IMPORTANT:
             cleaned = cleaned.strip()
 
             # Find JSON array in response
-            start_bracket = cleaned.find('[')
-            end_bracket = cleaned.rfind(']')
+            start_bracket = cleaned.find("[")
+            end_bracket = cleaned.rfind("]")
 
             if start_bracket != -1 and end_bracket != -1:
                 json_str = cleaned[start_bracket : end_bracket + 1]

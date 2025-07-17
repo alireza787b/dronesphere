@@ -27,10 +27,10 @@ class WaitCommand(BaseCommand):
 
     def validate_params(self) -> None:
         """Validate wait command parameters."""
-        if 'duration' not in self.params:
+        if "duration" not in self.params:
             raise ValueError("wait command requires 'duration' parameter")
 
-        duration = self.params['duration']
+        duration = self.params["duration"]
 
         if not isinstance(duration, (int, float)):
             raise ValueError("duration must be a number")
@@ -42,8 +42,8 @@ class WaitCommand(BaseCommand):
             raise ValueError("duration must not exceed 300 seconds (5 minutes)")
 
         # Validate optional message parameter
-        if 'message' in self.params:
-            message = self.params['message']
+        if "message" in self.params:
+            message = self.params["message"]
             if not isinstance(message, str):
                 raise ValueError("message must be a string")
             if len(message) > 100:
@@ -54,8 +54,8 @@ class WaitCommand(BaseCommand):
         start_time = time.time()
 
         try:
-            duration = self.params['duration']
-            custom_message = self.params.get('message', '')
+            duration = self.params["duration"]
+            custom_message = self.params.get("message", "")
 
             if custom_message:
                 print(f"⏱️  Waiting {duration}s: {custom_message}")

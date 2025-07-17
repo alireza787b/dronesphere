@@ -23,7 +23,7 @@ class TakeoffCommand(BaseCommand):
 
     def validate_params(self) -> None:
         """Validate takeoff parameters."""
-        altitude = self.params.get('altitude', 10.0)
+        altitude = self.params.get("altitude", 10.0)
 
         if not isinstance(altitude, (int, float)):
             raise ValueError("altitude must be a number")
@@ -58,7 +58,7 @@ class TakeoffCommand(BaseCommand):
                     error="backend_disconnected",
                 )
 
-            altitude = float(self.params.get('altitude', 10.0))
+            altitude = float(self.params.get("altitude", 10.0))
 
             # Check if already airborne
             is_on_ground = await self._check_ground_state(backend)

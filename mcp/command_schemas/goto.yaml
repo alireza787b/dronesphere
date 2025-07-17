@@ -205,9 +205,10 @@ language_patterns:
       - "move {north}m north, {east}m east, up {up}m"
 
   geographic_references:
-    - "fly to [location name]" → "I'll need GPS coordinates for that location"
-    - "go to the park" → "Please provide specific coordinates or relative directions"
-    - "return to base" → "Use 'return to launch' command instead"
+    - "fly to [location name] → I'll need GPS coordinates for that location"
+    - "go to the park → Please provide specific coordinates or relative directions"
+    - "return to base → Use 'return to launch' command instead"
+
 
 # Educational Content
 education:

@@ -56,7 +56,7 @@ class ConfigManager:
     def _load_config(self, config_path: str) -> Dict[str, Any]:
         """Load configuration from YAML file."""
         try:
-            with open(config_path, 'r') as f:
+            with open(config_path, "r") as f:
                 return yaml.safe_load(f)
         except FileNotFoundError:
             logger.warning(f"Config file {config_path} not found, using defaults")
@@ -107,7 +107,7 @@ class ConfigManager:
 
     def get(self, path: str, default=None):
         """Get configuration value using dot notation (e.g., 'llm.openrouter.model')."""
-        keys = path.split('.')
+        keys = path.split(".")
         value = self.config
         for key in keys:
             if isinstance(value, dict) and key in value:

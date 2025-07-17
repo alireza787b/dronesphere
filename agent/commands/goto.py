@@ -53,8 +53,8 @@ class GotoCommand(BaseCommand):
         params = self.params
 
         # Check coordinate system
-        has_gps = all(key in params for key in ['latitude', 'longitude', 'altitude'])
-        has_ned = all(key in params for key in ['north', 'east', 'down'])
+        has_gps = all(key in params for key in ["latitude", "longitude", "altitude"])
+        has_ned = all(key in params for key in ["north", "east", "down"])
 
         if not has_gps and not has_ned:
             raise ValueError(
@@ -71,21 +71,21 @@ class GotoCommand(BaseCommand):
             self._validate_ned_params()
 
         # Validate optional parameters
-        if 'speed' in params:
-            speed = params['speed']
+        if "speed" in params:
+            speed = params["speed"]
             if not isinstance(speed, (int, float)) or speed <= 0 or speed > 20:
                 raise ValueError("speed must be a positive number ≤ 20 m/s")
 
-        if 'acceptance_radius' in params:
-            radius = params['acceptance_radius']
+        if "acceptance_radius" in params:
+            radius = params["acceptance_radius"]
             if not isinstance(radius, (int, float)) or radius <= 0 or radius > 50:
                 raise ValueError("acceptance_radius must be positive and ≤ 50 meters")
 
     def _validate_gps_params(self) -> None:
         """Validate GPS coordinate parameters."""
-        lat = self.params['latitude']
-        lon = self.params['longitude']
-        alt = self.params['altitude']
+        lat = self.params["latitude"]
+        lon = self.params["longitude"]
+        alt = self.params["altitude"]
 
         if not isinstance(lat, (int, float)) or not (-90 <= lat <= 90):
             raise ValueError("latitude must be a number between -90 and 90 degrees")
@@ -101,9 +101,9 @@ class GotoCommand(BaseCommand):
         if pm is None:
             raise ValueError("NED coordinates require pymap3d library (uv pip install pymap3d)")
 
-        north = self.params['north']
-        east = self.params['east']
-        down = self.params['down']
+        north = self.params["north"]
+        east = self.params["east"]
+        down = self.params["down"]
 
         if not isinstance(north, (int, float)) or abs(north) > 10000:
             raise ValueError("north must be a number with absolute value ≤ 10000 meters")
@@ -197,11 +197,11 @@ class GotoCommand(BaseCommand):
             drone = backend.drone
 
             # Get target coordinates based on coordinate system
-            if 'latitude' in self.params:
+            if "latitude" in self.params:
                 # GPS coordinates - altitude is ABSOLUTE MSL
-                target_lat = self.params['latitude']
-                target_lon = self.params['longitude']
-                target_alt_msl = self.params['altitude']  # Already MSL
+                target_lat = self.params["latitude"]
+                target_lon = self.params["longitude"]
+                target_alt_msl = self.params["altitude"]  # Already MSL
                 coord_type = "GPS"
 
                 print(f"🔧 Executing goto to {coord_type} coordinates...")
@@ -211,7 +211,7 @@ class GotoCommand(BaseCommand):
             else:
                 # NED coordinates - relative to origin ground level
                 target_lat, target_lon, target_alt_msl = await self._convert_ned_to_gps(
-                    backend, self.params['north'], self.params['east'], self.params['down']
+                    backend, self.params["north"], self.params["east"], self.params["down"]
                 )
                 coord_type = "NED"
 
@@ -223,14 +223,14 @@ class GotoCommand(BaseCommand):
                 )
 
             # Get optional parameters
-            speed = self.params.get('speed', 5.0)
-            acceptance_radius = self.params.get('acceptance_radius', 2.0)
+            speed = self.params.get("speed", 5.0)
+            acceptance_radius = self.params.get("acceptance_radius", 2.0)
 
             print(f"   ⚡ Speed: {speed}m/s, Acceptance: {acceptance_radius}m")
 
             # Execute goto using MAVSDK action.goto_location with MSL altitude
             await drone.action.goto_location(
-                target_lat, target_lon, target_alt_msl, float('nan')  # Maintain current yaw
+                target_lat, target_lon, target_alt_msl, float("nan")  # Maintain current yaw
             )
 
             print(f"🚁 Navigate command sent, monitoring arrival...")
