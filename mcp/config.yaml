@@ -1,0 +1,208 @@
+# DroneSphere MCP Server Configuration
+# Professional configuration management with environment variable overrides
+
+# =============================================================================
+# MCP Server Settings
+# =============================================================================
+mcp:
+  name: "dronesphere-mcp"
+  version: "1.0.0"
+  description: "Natural language drone control via MCP protocol"
+
+  # Server connection (for web bridge only - pure MCP uses stdio)
+  web_bridge:
+    enabled: true
+    host: "0.0.0.0"
+    port: 3001
+
+# =============================================================================
+# LLM API Configuration
+# =============================================================================
+llm:
+  # Default provider and model (can be overridden by environment variables)
+  provider: "openrouter"  # or "openai"
+
+  # OpenRouter configuration (recommended)
+  openrouter:
+    base_url: "https://openrouter.ai/api/v1"
+    # Model selection - see https://openrouter.ai/models for full list
+    model: "deepseek/deepseek-r1-0528-qwen3-8b:free"      # High quality, good for complex reasoning
+    # Alternative models:
+    # model: "anthropic/claude-3-haiku"     # Faster, cheaper
+    # model: "openai/gpt-4o"               # OpenAI's latest
+    # model: "deepseek/deepseek-r1-0528-qwen3-8b:free"  # Free option
+
+    # Request parameters
+    temperature: 0.1        # Low for consistent command parsing
+    max_tokens: 1000        # Enough for command responses
+    timeout: 30             # API timeout in seconds
+
+    # Site information (optional, helps with rankings)
+    site_url: ""           # Will use SITE_URL env var if set
+    site_name: ""          # Will use SITE_NAME env var if set
+
+  # OpenAI configuration (alternative)
+  openai:
+    base_url: "https://api.openai.com/v1"
+    model: "gpt-4"
+    temperature: 0.1
+    max_tokens: 1000
+    timeout: 30
+
+# =============================================================================
+# DroneSphere Integration
+# =============================================================================
+dronesphere:
+  # DroneSphere server connection
+  server_url: "http://localhost:8002"
+  timeout: 60.0
+
+  # Default drone for commands (can be overridden per request)
+  default_drone_id: 1
+
+  # Command execution settings
+  default_queue_mode: "override"  # or "append"
+
+  # Health check settings
+  health_check_interval: 10  # seconds
+  max_retries: 3
+
+# =============================================================================
+# Safety Configuration
+# =============================================================================
+safety:
+  # Hard limits (enforced by code - cannot be overridden)
+  hard_limits:
+    max_altitude: 120       # Legal limit (meters)
+    max_speed: 25          # Hardware limit (m/s)
+    min_battery: 15        # Critical safety (%)
+    max_distance: 1000     # Maximum distance from origin (meters)
+
+  # Soft limits (AI education and warnings)
+  soft_limits:
+    recommended_altitude: 30     # Recommended max for beginners
+    recommended_speed: 10        # Recommended max for beginners
+    warning_battery: 25          # Warn below this level
+    comfort_distance: 200        # Recommend staying within this range
+
+  # Safety behavior
+  enable_warnings: true          # Show safety warnings to users
+  explain_limits: true           # Explain why limits exist
+  suggest_alternatives: true     # Suggest safer alternatives
+
+# =============================================================================
+# User Experience Configuration
+# =============================================================================
+user_experience:
+  # Response modes
+  modes:
+    beginner:
+      explain_concepts: true
+      use_analogies: true
+      show_safety_tips: true
+      verbose_feedback: true
+
+    expert:
+      technical_precision: true
+      concise_responses: true
+      show_technical_details: true
+      verbose_feedback: false
+
+    auto:
+      detect_skill_level: true
+      adapt_responses: true
+
+  # Default mode (beginner, expert, auto)
+  default_mode: "auto"
+
+  # Language support
+  languages:
+    default: "english"
+    supported: ["english", "spanish", "french", "german"]
+    auto_detect: true
+
+  # Response formatting
+  formatting:
+    use_emojis: true
+    use_markdown: true
+    include_timestamps: true
+    show_duration: true
+
+# =============================================================================
+# Command Configuration
+# =============================================================================
+commands:
+  # Enable/disable specific commands
+  enabled:
+    takeoff: true
+    land: true
+    goto: true
+    wait: true
+    rtl: true
+
+  # Command-specific settings
+  takeoff:
+    default_altitude: 10.0
+    min_altitude: 1.0
+    max_altitude: 50.0
+
+  goto:
+    default_speed: 5.0
+    max_speed: 20.0
+    default_acceptance_radius: 2.0
+    coordinate_systems: ["gps", "ned"]
+    prefer_ned_for_beginners: true
+
+  wait:
+    min_duration: 0.1
+    max_duration: 300.0
+    default_duration: 3.0
+
+# =============================================================================
+# Logging Configuration
+# =============================================================================
+logging:
+  level: "INFO"              # DEBUG, INFO, WARNING, ERROR
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+  # File logging (optional)
+  file:
+    enabled: false
+    path: "logs/mcp_server.log"
+    max_size: "10MB"
+    backup_count: 5
+
+  # Console logging
+  console:
+    enabled: true
+    use_colors: true
+
+# =============================================================================
+# Development Configuration
+# =============================================================================
+development:
+  # Debug settings
+  debug_mode: false
+  verbose_logging: false
+
+  # Testing
+  mock_dronesphere: false    # Use mock responses for testing
+  test_mode: false           # Enable test-specific behavior
+
+  # Performance
+  cache_responses: false     # Cache LLM responses (for development)
+  response_delay: 0          # Artificial delay for testing (seconds)
+
+# =============================================================================
+# Environment Variable Overrides
+# =============================================================================
+# Any setting above can be overridden by environment variables using the format:
+# SECTION_SUBSECTION_SETTING (e.g., LLM_OPENROUTER_MODEL)
+#
+# Common overrides:
+# - LLM_OPENROUTER_MODEL: Override the AI model
+# - LLM_OPENROUTER_TEMPERATURE: Override response randomness
+# - DRONESPHERE_SERVER_URL: Override server connection
+# - SAFETY_HARD_LIMITS_MAX_ALTITUDE: Override altitude limit
+# - LOGGING_LEVEL: Override log level
+# - DEVELOPMENT_DEBUG_MODE: Enable debug mode

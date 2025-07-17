@@ -1,0 +1,285 @@
+# Goto Command Schema for AI Integration
+# Path: mcp/command_schemas/goto.yaml
+
+name: goto
+description: "Navigate drone to specified GPS or NED coordinates with intelligent coordinate system selection"
+
+# AI Guidelines for Intelligent Processing
+ai_guidelines:
+  safety_considerations:
+    - "GPS altitudes are absolute MSL - explain difference to user"
+    - "NED coordinates are relative to takeoff point - safer for beginners"
+    - "Always validate coordinates are within safe flight area"
+    - "Consider obstacles and no-fly zones along flight path"
+    - "Verify target altitude is appropriate for location"
+
+  user_education:
+    - "GPS coordinates: Like a street address with specific latitude/longitude"
+    - "NED coordinates: Like directions from here (50m north, 30m east, 15m up)"
+    - "GPS altitude is absolute sea level (MSL) - professional but complex"
+    - "NED altitude is relative to takeoff point - easier for beginners"
+    - "System automatically converts between coordinate types"
+
+  beginner_explanation:
+    - "GPS = Street address system (lat/lon/altitude from sea level)"
+    - "NED = Direction system (go N meters north, E meters east, U meters up)"
+    - "For local flying, NED is simpler: 'go 50 meters north'"
+    - "For specific locations, GPS is precise: 'go to this exact spot'"
+
+  coordinate_system_selection:
+    beginner_preference: "NED"
+    expert_preference: "GPS"
+    auto_detect: true
+    explanation_required: true
+
+# Parameter Definition - Two Coordinate Systems
+parameters:
+  # GPS Coordinate System (Absolute positioning)
+  gps_system:
+    latitude:
+      type: float
+      required: false  # Only if using GPS
+      min_value: -90.0
+      max_value: 90.0
+      unit: "degrees"
+      description: "GPS latitude in decimal degrees"
+      precision: 6  # 6 decimal places = ~1m accuracy
+
+    longitude:
+      type: float
+      required: false  # Only if using GPS
+      min_value: -180.0
+      max_value: 180.0
+      unit: "degrees"
+      description: "GPS longitude in decimal degrees"
+      precision: 6
+
+    altitude:
+      type: float
+      required: false  # Only if using GPS
+      min_value: -500.0
+      max_value: 10000.0
+      unit: "meters MSL"
+      description: "Absolute altitude above Mean Sea Level"
+
+      reference_examples:
+        zurich_ground: 488.0   # Zurich ground level MSL
+        zurich_15m_up: 503.0   # 15m above Zurich ground
+        sea_level: 0.0
+        note: "MSL altitude varies by location - ground level differs"
+
+  # NED Coordinate System (Relative positioning)
+  ned_system:
+    north:
+      type: float
+      required: false  # Only if using NED
+      min_value: -10000.0
+      max_value: 10000.0
+      unit: "meters"
+      description: "North displacement from origin (positive = north)"
+
+    east:
+      type: float
+      required: false  # Only if using NED
+      min_value: -10000.0
+      max_value: 10000.0
+      unit: "meters"
+      description: "East displacement from origin (positive = east)"
+
+    down:
+      type: float
+      required: false  # Only if using NED
+      min_value: -1000.0
+      max_value: 100.0
+      unit: "meters"
+      description: "Down displacement from origin (negative = up, positive = down)"
+
+      user_guidance:
+        up_movement: "Use negative values to go UP (e.g., -15 = 15m above origin)"
+        down_movement: "Use positive values to go DOWN (e.g., 5 = 5m below origin)"
+        common_mistake: "Remember: negative down = higher altitude"
+
+  # Optional Parameters (Both Systems)
+  optional:
+    speed:
+      type: float
+      required: false
+      min_value: 0.1
+      max_value: 25.0
+      default: 5.0
+      unit: "m/s"
+      description: "Flight speed during navigation"
+
+      recommendations:
+        beginner: 3.0
+        normal: 5.0
+        expert: 10.0
+        max_safe: 15.0
+
+    acceptance_radius:
+      type: float
+      required: false
+      min_value: 0.5
+      max_value: 50.0
+      default: 2.0
+      unit: "meters"
+      description: "Distance tolerance for arrival detection"
+
+# Coordinate System Intelligence
+coordinate_intelligence:
+  detection_patterns:
+    gps_indicators:
+      - "latitude"
+      - "longitude"
+      - "coordinates"
+      - "GPS"
+      - "lat/lon"
+      - "degrees"
+
+    ned_indicators:
+      - "north"
+      - "east"
+      - "relative"
+      - "from here"
+      - "meters away"
+      - "direction"
+
+  auto_selection_rules:
+    use_gps_when:
+      - "User provides lat/lon coordinates"
+      - "User mentions specific location names"
+      - "User asks for 'absolute positioning'"
+
+    use_ned_when:
+      - "User says 'go X meters north/east'"
+      - "User mentions relative positioning"
+      - "User is beginner and wants simple commands"
+
+  conversion_intelligence:
+    ned_to_gps: "Automatically convert using PX4 origin"
+    gps_to_ned: "Calculate relative displacement from current position"
+    explain_conversion: true
+
+# Safety and Robustness Rules
+robustness:
+  preconditions:
+    - "Drone must be armed and airborne (relative altitude > 0.5m)"
+    - "Target coordinates must be within safe flight area"
+    - "Flight path must not intersect no-fly zones"
+
+  coordinate_validation:
+    gps_sanity_checks:
+      - "Latitude between -90 and 90 degrees"
+      - "Longitude between -180 and 180 degrees"
+      - "Altitude reasonable for location (e.g., not 5000m for city flight)"
+
+    ned_sanity_checks:
+      - "Distance from origin reasonable (<1000m typically)"
+      - "Target altitude within legal limits"
+      - "No underground destinations (positive down values)"
+
+  failure_modes:
+    not_airborne:
+      action: "error"
+      message: "Navigation requires drone to be airborne. Use takeoff first."
+
+    invalid_coordinates:
+      action: "error_with_help"
+      message: "Invalid coordinates provided"
+      help: "GPS format: lat=47.398, lon=8.546, alt=503.0 OR NED format: north=50, east=30, down=-15"
+
+    out_of_range:
+      action: "warn_suggest_alternative"
+      message: "Coordinates very far from current position - consider shorter distances"
+
+# Multi-language Coordinate Parsing
+language_patterns:
+  english:
+    gps:
+      - "go to coordinates {lat}, {lon}"
+      - "navigate to {lat} latitude {lon} longitude"
+      - "fly to GPS {lat}, {lon}, {alt}m"
+    ned:
+      - "go {north}m north and {east}m east"
+      - "fly {north} meters north, {east} meters east, {up} meters up"
+      - "move {north}m north, {east}m east, up {up}m"
+
+  geographic_references:
+    - "fly to [location name]" → "I'll need GPS coordinates for that location"
+    - "go to the park" → "Please provide specific coordinates or relative directions"
+    - "return to base" → "Use 'return to launch' command instead"
+
+# Educational Content
+education:
+  coordinate_systems_explained:
+    gps:
+      description: "Global Positioning System using latitude/longitude"
+      analogy: "Like a street address that works anywhere in the world"
+      benefits: "Precise, absolute, works for any location"
+      complexity: "Need to understand MSL altitude differences"
+
+    ned:
+      description: "North-East-Down relative to takeoff point"
+      analogy: "Like giving directions: go 50m north, 30m east from here"
+      benefits: "Simple, intuitive, relative to where you are"
+      complexity: "Limited to local area around takeoff point"
+
+  altitude_guidance:
+    msl_explanation:
+      - "MSL = Mean Sea Level altitude (absolute height above ocean)"
+      - "Ground altitude varies: Zurich ~488m MSL, Amsterdam ~0m MSL"
+      - "To fly 15m above ground in Zurich: use 503m MSL altitude"
+      - "Always add local ground elevation to desired height above ground"
+
+    ned_altitude:
+      - "NED down: negative = higher, positive = lower"
+      - "down=-15 means 15 meters ABOVE the takeoff point"
+      - "down=5 means 5 meters BELOW the takeoff point (dangerous!)"
+
+  safety_education:
+    flight_planning:
+      - "Always check the path between current and target positions"
+      - "Avoid flying over people, buildings, or restricted areas"
+      - "Consider wind conditions for longer flights"
+      - "Have emergency landing sites identified along route"
+
+# Response Templates
+response_templates:
+  coordinate_clarification:
+    ambiguous: "I detected coordinates but need clarification. Do you want to use GPS coordinates (absolute position) or NED coordinates (relative to takeoff point)?"
+
+    gps_explanation: "Using GPS coordinates (absolute positioning): lat={lat}, lon={lon}, altitude={alt}m MSL. This is {alt_above_ground}m above local ground level."
+
+    ned_explanation: "Using NED coordinates (relative positioning): {north}m north, {east}m east, {down}m down from takeoff point. Negative down means going UP."
+
+  success:
+    gps: "✅ Navigation to GPS coordinates completed! Arrived at {lat:.6f}, {lon:.6f} at {alt}m MSL ({distance:.1f}m accuracy)"
+    ned: "✅ Navigation completed! Moved {north}m north, {east}m east, {vertical}m up/down from origin ({distance:.1f}m accuracy)"
+
+  educational:
+    first_time_gps: "🗺️ GPS coordinates are like global addresses - they work anywhere but require understanding altitude systems. MSL altitude = height above sea level."
+    first_time_ned: "🧭 NED coordinates are like local directions - simple and intuitive but only work near your takeoff point."
+
+# Integration with DroneSphere Universal Protocol
+protocol_mapping:
+  dronesphere_command: "goto"
+
+  gps_example:
+    commands:
+      - name: "goto"
+        params:
+          latitude: 47.398
+          longitude: 8.546
+          altitude: 503.0
+          speed: 5.0
+        mode: "continue"
+
+  ned_example:
+    commands:
+      - name: "goto"
+        params:
+          north: 50.0
+          east: 30.0
+          down: -15.0
+          speed: 5.0
+        mode: "continue"

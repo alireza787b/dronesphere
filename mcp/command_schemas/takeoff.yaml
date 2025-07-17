@@ -1,0 +1,139 @@
+# Takeoff Command Schema for AI Integration
+# Path: mcp/command_schemas/takeoff.yaml
+
+name: takeoff
+description: "Launch drone to specified altitude above ground level"
+
+# AI Guidelines for Intelligent Processing
+ai_guidelines:
+  safety_considerations:
+    - "Ensure takeoff altitude is between 1-50 meters for safety"
+    - "Check that area above drone is clear of obstacles"
+    - "Verify weather conditions are suitable for flight"
+    - "Confirm drone is on stable, level ground before takeoff"
+
+  user_education:
+    - "Takeoff arms the drone and lifts it vertically to target altitude"
+    - "The drone will hover at the specified altitude after takeoff"
+    - "Altitude is measured relative to ground level, not sea level"
+    - "After takeoff, drone is ready for navigation commands"
+
+  beginner_explanation:
+    - "Think of takeoff like an elevator going up to a specific floor"
+    - "The drone will rise straight up and stop at your chosen height"
+    - "Higher altitude = better view but follows aviation rules"
+    - "Start with 10-15 meters for safety and good visibility"
+
+  common_requests:
+    - "take off to X meters"
+    - "launch drone to X altitude"
+    - "lift off X meters high"
+    - "go up X meters"
+
+# Parameter Definition
+parameters:
+  altitude:
+    type: float
+    required: true
+    min_value: 1.0
+    max_value: 50.0
+    default: 10.0
+    unit: "meters"
+    description: "Target altitude above current ground level"
+
+    validation:
+      recommended_min: 5.0    # For stable flight
+      recommended_max: 30.0   # For visual line of sight
+      legal_max: 120.0        # But we limit to 50m for safety
+
+    user_guidance:
+      beginner: "Start with 10-15 meters for practice"
+      expert: "Consider wind conditions at higher altitudes"
+      safety_note: "Higher altitude = longer fall time if emergency"
+
+# Safety and Robustness Rules
+robustness:
+  preconditions:
+    - "Drone must be on ground (relative altitude < 0.5m)"
+    - "Drone can be armed or disarmed (command will arm if needed)"
+    - "Flight area must be clear of obstacles"
+
+  failure_modes:
+    already_airborne:
+      action: "return_success"
+      message: "Drone already airborne - takeoff not needed"
+
+    insufficient_battery:
+      action: "warn_continue"
+      threshold: 20  # percent
+      message: "Low battery warning - consider charging before flight"
+
+    bad_weather:
+      action: "warn_continue"
+      message: "Check weather conditions before takeoff"
+
+# Integration with DroneSphere Universal Protocol
+protocol_mapping:
+  dronesphere_command: "takeoff"
+  parameter_mapping:
+    altitude: "altitude"  # Direct mapping
+
+  example_request:
+    commands:
+      - name: "takeoff"
+        params:
+          altitude: 15.0
+        mode: "continue"
+    target_drone: 1
+    queue_mode: "override"
+
+# Multi-language Support (AI handles translation)
+language_patterns:
+  english:
+    - "take off to {altitude} meters"
+    - "launch drone {altitude}m high"
+    - "lift off to {altitude} meters"
+
+  spanish:
+    - "despegar a {altitude} metros"
+    - "elevar dron {altitude} metros"
+
+  french:
+    - "décoller à {altitude} mètres"
+    - "élever le drone à {altitude} mètres"
+
+  german:
+    - "starten auf {altitude} Meter"
+    - "abheben auf {altitude} Meter Höhe"
+
+# Context-Aware Responses
+response_templates:
+  success:
+    beginner: "🚁 Great! Your drone is now flying at {altitude} meters. It's hovering safely and ready for your next command."
+    expert: "✅ Takeoff completed to {altitude}m in {duration}s. Drone armed and stabilized."
+
+  safety_warning:
+    high_altitude: "⚠️ {altitude}m is quite high! For safety, consider starting lower around 10-15m until you're comfortable."
+    low_battery: "🔋 Battery at {battery}% - you might want to charge before extended flight."
+
+  error:
+    already_airborne: "ℹ️ Your drone is already flying at {current_altitude}m. No takeoff needed!"
+    ground_required: "❌ Takeoff requires drone to be on the ground. Current altitude: {current_altitude}m"
+
+# Educational Content for New Users
+education:
+  safety_tips:
+    - "Always maintain visual line of sight with your drone"
+    - "Check local regulations - max altitude varies by location"
+    - "Start with lower altitudes to practice control"
+    - "Have a landing plan before takeoff"
+
+  physics_explanation:
+    - "Drone uses rotors to generate lift force greater than weight"
+    - "Altitude is maintained by balancing lift with gravity"
+    - "Wind affects stability - higher = more wind"
+
+  legal_considerations:
+    - "Most areas limit recreational drones to 120m (400ft)"
+    - "Some locations require permits for any flight"
+    - "Always check NOTAMs and restricted airspace"
