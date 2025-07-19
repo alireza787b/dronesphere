@@ -567,6 +567,7 @@ class EnhancedLLMWebBridge:
                         "success": execution_result["success"],
                         "message": response_msg,
                         "original_request": message.message,
+                        "telemetry": result.get("telemetry_data", {}),
                     }
 
                 elif result.get("blocked_for_safety"):
@@ -579,6 +580,7 @@ class EnhancedLLMWebBridge:
                         "success": False,
                         "message": response_msg,
                         "original_request": message.message,
+                        "telemetry": result.get("telemetry_data", {}),
                     }
 
                 else:
@@ -589,6 +591,7 @@ class EnhancedLLMWebBridge:
                         "success": True,
                         "message": response_msg,
                         "original_request": message.message,
+                        "telemetry": result.get("telemetry_data", {}),
                     }
 
             except Exception as e:
@@ -611,6 +614,16 @@ class EnhancedLLMWebBridge:
             except Exception as e:
                 logger.error(f"Status check error: {e}")
                 return {"status": {"error": str(e)}}
+
+        @self.app.get("/telemetry/{drone_id}")
+        async def get_telemetry(drone_id: int):
+            """Get live telemetry data."""
+            try:
+                telemetry = await self.llm_controller.telemetry_manager.get_live_telemetry(drone_id)
+                return telemetry
+            except Exception as e:
+                logger.error(f"Telemetry fetch error: {e}")
+                return {"error": str(e)}
 
     async def _execute_commands(self, commands: List[Dict], target_drone: int) -> Dict[str, Any]:
         """Execute commands through DroneSphere."""
@@ -652,132 +665,1022 @@ class EnhancedLLMWebBridge:
         uvicorn.run(self.app, host="0.0.0.0", port=3001, log_level="info")
 
 
-# Enhanced HTML Interface with Telemetry Features
+# Enhanced HTML Interface with Premium UI/UX Design
 HTML_INTERFACE = """<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>DroneSphere - Enhanced AI Drone Control</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DroneSphere Pro - Advanced AI Flight Control</title>
+
+    <!-- Font imports -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); }
-        .header { text-align: center; margin-bottom: 30px; color: #333; }
-        .header h1 { color: #667eea; margin-bottom: 10px; font-size: 2.5em; }
-        .ai-badge { background: linear-gradient(45deg, #667eea, #764ba2); color: white; padding: 5px 15px; border-radius: 20px; font-size: 0.9em; display: inline-block; margin-bottom: 10px; }
-        .telemetry-badge { background: linear-gradient(45deg, #28a745, #20c997); color: white; padding: 5px 15px; border-radius: 20px; font-size: 0.9em; display: inline-block; margin-left: 10px; }
-        .status-panel { background: linear-gradient(45deg, #f8f9fa, #e9ecef); padding: 20px; border-radius: 10px; margin-bottom: 20px; border-left: 5px solid #667eea; }
-        .chat-container { margin-bottom: 30px; }
-        .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
-        .input-group input { flex: 1; padding: 15px; font-size: 16px; border: 2px solid #ddd; border-radius: 10px; transition: border-color 0.3s; }
-        .input-group input:focus { border-color: #667eea; outline: none; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
-        .input-group button { padding: 15px 25px; background: linear-gradient(45deg, #667eea, #764ba2); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: bold; transition: transform 0.2s; }
-        .input-group button:hover { transform: translateY(-2px); }
-        .input-group button:disabled { background: #ccc; transform: none; cursor: not-allowed; }
-        .chat-history { min-height: 400px; max-height: 600px; overflow-y: auto; border: 2px solid #eee; padding: 25px; margin-bottom: 20px; background: #fafafa; border-radius: 10px; }
-        .message { margin-bottom: 20px; padding: 15px; border-radius: 12px; animation: fadeIn 0.3s ease-in; }
-        .user-message { background: linear-gradient(45deg, #e3f2fd, #bbdefb); margin-left: 10%; border-left: 4px solid #2196f3; }
-        .bot-message { background: linear-gradient(45deg, #f1f8e9, #c8e6c9); margin-right: 10%; border-left: 4px solid #4caf50; }
-        .error-message { background: linear-gradient(45deg, #ffebee, #ffcdd2); margin-right: 10%; border-left: 4px solid #f44336; }
-        .examples { background: linear-gradient(45deg, #e8f4f8, #d1ecf1); padding: 25px; border-radius: 10px; }
-        .example { background: white; padding: 12px; margin: 10px 0; border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: all 0.3s; }
-        .example:hover { background: #f0f8ff; border-color: #667eea; transform: translateY(-2px); }
-        .language-examples { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 15px; }
-        .lang-group { background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .timestamp { font-size: 11px; color: #888; margin-top: 8px; font-style: italic; }
+        /* CSS Variables for theming */
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #0f172a;
+            --dark-secondary: #1e293b;
+            --dark-tertiary: #334155;
+            --light: #f8fafc;
+            --light-secondary: #f1f5f9;
+            --light-tertiary: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --text-light: #cbd5e1;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+            --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-dark: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            --gradient-danger: linear-gradient(135deg, #f59e0b 0%, #dc2626 100%);
+        }
+
+        /* Dark mode variables */
+        [data-theme="dark"] {
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-light: #64748b;
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --border-color: #334155;
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #f1f5f9;
+            --border-color: #e2e8f0;
+        }
+
+        /* Global Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+            transition: all 0.3s ease;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
+        }
+
+        /* Main Layout */
+        .app-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-primary);
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: var(--shadow);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo {
+            width: 48px;
+            height: 48px;
+            background: var(--gradient-primary);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            box-shadow: var(--shadow-lg);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .brand-name {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.02em;
+        }
+
+        .status-badges {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .status-badge {
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .status-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .status-badge.active {
+            background: var(--gradient-success);
+            color: white;
+            border-color: transparent;
+        }
+
+        .status-badge.warning {
+            background: var(--gradient-danger);
+            color: white;
+            border-color: transparent;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .theme-toggle {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            font-size: 1.1rem;
+        }
+
+        .theme-toggle:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 2rem;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Telemetry Panel */
+        .telemetry-panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 1.5rem;
+            height: fit-content;
+            box-shadow: var(--shadow-lg);
+            position: sticky;
+            top: 100px;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .panel-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .telemetry-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .telemetry-item {
+            background: var(--bg-tertiary);
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .telemetry-item:hover {
+            transform: translateX(4px);
+            box-shadow: var(--shadow);
+            border-color: var(--primary);
+        }
+
+        .telemetry-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .telemetry-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .telemetry-unit {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        /* Progress Bars */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-primary);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--gradient-success);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-fill.warning {
+            background: var(--gradient-danger);
+        }
+
+        /* 3D Map Visualization */
+        .map-container {
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-top: 1rem;
+            height: 200px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .map-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(45deg, var(--primary) 25%, transparent 25%, transparent 75%, var(--primary) 75%, var(--primary)),
+                        linear-gradient(45deg, var(--primary) 25%, transparent 25%, transparent 75%, var(--primary) 75%, var(--primary));
+            background-size: 30px 30px;
+            background-position: 0 0, 15px 15px;
+            opacity: 0.1;
+            position: relative;
+        }
+
+        .drone-icon {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            box-shadow: var(--shadow-xl);
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(180deg); }
+        }
+
+        /* Chat Section */
+        .chat-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 200px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .chat-header {
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1rem;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem 0;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .message {
+            max-width: 80%;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .message-bubble {
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            position: relative;
+            box-shadow: var(--shadow);
+        }
+
+        .message.user .message-bubble {
+            background: var(--gradient-primary);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant .message-bubble {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .message.user .message-time {
+            text-align: right;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* Chat Input */
+        .chat-input-container {
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+            font-size: 1rem;
+            font-family: inherit;
+            resize: none;
+            min-height: 56px;
+            max-height: 120px;
+            transition: all 0.3s ease;
+            color: var(--text-primary);
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .send-button {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
+        }
+
+        .send-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: var(--text-secondary);
+        }
+
+        /* Quick Commands */
+        .quick-commands {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .quick-commands-header {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        .commands-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.5rem;
+        }
+
+        .command-chip {
+            padding: 0.75rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .command-chip:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+            border-color: transparent;
+        }
+
+        .command-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-primary);
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+
+        .command-chip:hover .command-icon {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Loading Animation */
+        .typing-indicator {
+            display: flex;
+            gap: 0.25rem;
+            padding: 1rem;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--text-secondary);
+            border-radius: 50%;
+            animation: typing 1.4s ease-in-out infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.7; }
+            30% { transform: translateY(-10px); opacity: 1; }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .telemetry-panel {
+                position: relative;
+                top: 0;
+            }
+
+            .chat-section {
+                height: auto;
+                min-height: 600px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                padding: 1rem;
+            }
+
+            .main-content {
+                padding: 1rem;
+                gap: 1rem;
+            }
+
+            .status-badges {
+                display: none;
+            }
+
+            .brand-name {
+                font-size: 1.25rem;
+            }
+
+            .message {
+                max-width: 90%;
+            }
+
+            .commands-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Markdown Styles */
+        .message-content {
+            line-height: 1.6;
+        }
+
+        .message-content strong {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .message.user .message-content strong {
+            color: white;
+            font-weight: 700;
+        }
+
+        .message-content code {
+            background: var(--bg-primary);
+            padding: 0.125rem 0.375rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875em;
+        }
+
+        .message.user .message-content code {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .message-content ul, .message-content ol {
+            margin: 0.5rem 0 0.5rem 1.5rem;
+        }
+
+        .message-content li {
+            margin: 0.25rem 0;
+        }
+
+        /* Safety Indicators */
+        .safety-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            background: var(--bg-tertiary);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin: 0.5rem 0;
+        }
+
+        .safety-indicator.safe {
+            background: var(--gradient-success);
+            color: white;
+        }
+
+        .safety-indicator.warning {
+            background: var(--gradient-danger);
+            color: white;
+        }
+
+        /* Notification Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            box-shadow: var(--shadow-2xl);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            animation: slideUp 0.3s ease-out;
+            z-index: 2000;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--success);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--danger);
+        }
+
+        .toast-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .toast.success .toast-icon {
+            background: var(--success);
+            color: white;
+        }
+
+        .toast.error .toast-icon {
+            background: var(--danger);
+            color: white;
+        }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🚁 DroneSphere Enhanced</h1>
-            <div class="ai-badge">🧠 AI Expert</div>
-            <div class="telemetry-badge">📊 Live Telemetry</div>
-            <p>Professional drone control with real-time telemetry and safety expert oversight</p>
-        </div>
+<body data-theme="dark">
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="logo">
+                        <i class="fas fa-helicopter"></i>
+                    </div>
+                    <h1 class="brand-name">DroneSphere Pro</h1>
+                </div>
 
-        <div class="status-panel">
-            <div id="systemStatus">
-                <strong>🤖 Enhanced AI System:</strong> <span id="statusText">Initializing...</span>
-            </div>
-        </div>
+                <div class="status-badges">
+                    <div class="status-badge active">
+                        <i class="fas fa-brain"></i>
+                        <span>AI Expert</span>
+                    </div>
+                    <div class="status-badge active">
+                        <i class="fas fa-satellite-dish"></i>
+                        <span>Live Telemetry</span>
+                    </div>
+                    <div class="status-badge active">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Safety Active</span>
+                    </div>
+                </div>
 
-        <div class="chat-container">
-            <div class="input-group">
-                <input type="text" id="messageInput" placeholder="Ask about telemetry: 'What's my battery voltage?' or command: 'take off to 15 meters'" />
-                <button id="sendButton" onclick="sendMessage()">Send</button>
-            </div>
-
-            <div id="chatHistory" class="chat-history">
-                <div class="bot-message">
-                    <strong>🤖 DroneSphere Expert:</strong> Ready with live telemetry awareness! I can answer technical questions and provide expert safety review.
-                    <div class="timestamp">Enhanced AI • Live telemetry • Safety expert active</div>
+                <div class="header-actions">
+                    <button class="theme-toggle" onclick="toggleTheme()">
+                        <i class="fas fa-moon" id="themeIcon"></i>
+                    </button>
                 </div>
             </div>
-        </div>
+        </header>
 
-        <div class="examples">
-            <h3>💡 Enhanced Commands & Questions:</h3>
-
-            <div class="language-examples">
-                <div class="lang-group">
-                    <h4>🔋 Technical Questions</h4>
-                    <div class="example" onclick="setCommand('What is my battery voltage?')">⚡ "What is my battery voltage?"</div>
-                    <div class="example" onclick="setCommand('Where am I exactly?')">📍 "Where am I exactly?"</div>
-                    <div class="example" onclick="setCommand('What is my current altitude?')">📏 "What is my current altitude?"</div>
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Telemetry Panel -->
+            <aside class="telemetry-panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">
+                        <i class="fas fa-chart-line"></i>
+                        Live Telemetry
+                    </h2>
+                    <div class="status-badge active" style="font-size: 0.75rem;">
+                        <i class="fas fa-circle"></i>
+                        Connected
+                    </div>
                 </div>
 
-                <div class="lang-group">
-                    <h4>🇮🇷 Persian Technical</h4>
-                    <div class="example" onclick="setCommand('ولتاژ باتری چنده؟')">⚡ "ولتاژ باتری چنده؟"</div>
-                    <div class="example" onclick="setCommand('کجام الان؟')">📍 "کجام الان؟"</div>
-                    <div class="example" onclick="setCommand('ارتفاعم چقدره؟')">📏 "ارتفاعم چقدره؟"</div>
+                <div class="telemetry-grid">
+                    <!-- Battery -->
+                    <div class="telemetry-item">
+                        <div class="telemetry-label">
+                            <i class="fas fa-battery-three-quarters"></i>
+                            Battery Level
+                        </div>
+                        <div class="telemetry-value">
+                            <span id="batteryValue">--</span><span class="telemetry-unit">%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="batteryProgress" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Altitude -->
+                    <div class="telemetry-item">
+                        <div class="telemetry-label">
+                            <i class="fas fa-arrows-alt-v"></i>
+                            Altitude (MSL)
+                        </div>
+                        <div class="telemetry-value">
+                            <span id="altitudeValue">--</span><span class="telemetry-unit">m</span>
+                        </div>
+                    </div>
+
+                    <!-- GPS -->
+                    <div class="telemetry-item">
+                        <div class="telemetry-label">
+                            <i class="fas fa-map-marker-alt"></i>
+                            GPS Position
+                        </div>
+                        <div class="telemetry-value" style="font-size: 1rem;">
+                            <div>LAT: <span id="latValue">--</span>°</div>
+                            <div>LON: <span id="lonValue">--</span>°</div>
+                        </div>
+                    </div>
+
+                    <!-- Voltage -->
+                    <div class="telemetry-item">
+                        <div class="telemetry-label">
+                            <i class="fas fa-bolt"></i>
+                            Voltage
+                        </div>
+                        <div class="telemetry-value">
+                            <span id="voltageValue">--</span><span class="telemetry-unit">V</span>
+                        </div>
+                    </div>
+
+                    <!-- Flight Mode -->
+                    <div class="telemetry-item">
+                        <div class="telemetry-label">
+                            <i class="fas fa-plane"></i>
+                            Flight Mode
+                        </div>
+                        <div class="telemetry-value" style="font-size: 1rem;">
+                            <span id="flightModeValue">--</span>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="lang-group">
-                    <h4>🛡️ Safety Commands</h4>
-                    <div class="example" onclick="setCommand('take off to 200 meters')">⚠️ Test safety limits</div>
-                    <div class="example" onclick="setCommand('Is it safe to fly?')">🔍 "Is it safe to fly?"</div>
+                <!-- Map Visualization -->
+                <div class="map-container">
+                    <div class="map-placeholder">
+                        <div class="drone-icon" id="droneIcon">
+                            <i class="fas fa-helicopter"></i>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Chat Section -->
+            <section class="chat-section">
+                <div class="chat-header">
+                    <h2 class="panel-title">
+                        <i class="fas fa-comments"></i>
+                        AI Flight Assistant
+                    </h2>
                 </div>
 
-                <div class="lang-group">
-                    <h4>🧠 Expert Commands</h4>
-                    <div class="example" onclick="setCommand('take off to 15m, wait 3s, then land')">⚡ Multi-step missions</div>
-                    <div class="example" onclick="setCommand('fly to coordinates 47.398, 8.546')">🗺️ GPS navigation</div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message assistant">
+                        <div class="message-bubble">
+                            <div class="message-content">
+                                <strong>Welcome to DroneSphere Pro!</strong> 🚁<br><br>
+                                I'm your AI flight expert with real-time telemetry awareness. I can help you with:
+                                <ul>
+                                    <li>Flight commands and navigation</li>
+                                    <li>Technical questions about your drone</li>
+                                    <li>Safety assessments and recommendations</li>
+                                    <li>Multi-language support (English, Persian, Spanish)</li>
+                                </ul>
+                                How can I assist you today?
+                            </div>
+                        </div>
+                        <div class="message-time">
+                            <i class="far fa-clock"></i>
+                            <span>${new Date().toLocaleTimeString()}</span>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
+
+                <div class="chat-input-container">
+                    <div class="chat-input-wrapper">
+                        <textarea
+                            class="chat-input"
+                            id="chatInput"
+                            placeholder="Type your command or question..."
+                            rows="1"
+                            onkeydown="handleKeyPress(event)"
+                            oninput="autoResize(this)"
+                        ></textarea>
+                        <button class="send-button" id="sendButton" onclick="sendMessage()">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+
+                    <div class="quick-commands">
+                        <div class="quick-commands-header">Quick Commands</div>
+                        <div class="commands-grid">
+                            <div class="command-chip" onclick="setCommand('What is my battery level?')">
+                                <div class="command-icon">🔋</div>
+                                <span>Battery Status</span>
+                            </div>
+                            <div class="command-chip" onclick="setCommand('Take off to 15 meters')">
+                                <div class="command-icon">🚁</div>
+                                <span>Take Off</span>
+                            </div>
+                            <div class="command-chip" onclick="setCommand('Where am I?')">
+                                <div class="command-icon">📍</div>
+                                <span>GPS Location</span>
+                            </div>
+                            <div class="command-chip" onclick="setCommand('Land safely')">
+                                <div class="command-icon">🛬</div>
+                                <span>Land</span>
+                            </div>
+                            <div class="command-chip" onclick="setCommand('Is it safe to fly?')">
+                                <div class="command-icon">🛡️</div>
+                                <span>Safety Check</span>
+                            </div>
+                            <div class="command-chip" onclick="setCommand('Return to home')">
+                                <div class="command-icon">🏠</div>
+                                <span>RTL</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
     </div>
 
     <script>
-        let chatHistory = document.getElementById('chatHistory');
-        let messageInput = document.getElementById('messageInput');
-        let sendButton = document.getElementById('sendButton');
+        // Theme Management
+        const theme = localStorage.getItem('theme') || 'dark';
+        document.body.setAttribute('data-theme', theme);
+        updateThemeIcon();
 
-        function addMessage(content, type = 'bot') {
-            let messageDiv = document.createElement('div');
-            messageDiv.className = `message ${type}-message`;
-            messageDiv.innerHTML = content + `<div class="timestamp">${new Date().toLocaleTimeString()}</div>`;
-            chatHistory.appendChild(messageDiv);
-            chatHistory.scrollTop = chatHistory.scrollHeight;
+        function toggleTheme() {
+            const currentTheme = document.body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon();
+            showToast('Theme changed to ' + newTheme + ' mode', 'success');
+        }
+
+        function updateThemeIcon() {
+            const theme = document.body.getAttribute('data-theme');
+            const icon = document.getElementById('themeIcon');
+            icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+        }
+
+        // Chat functionality
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
+
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
         }
 
         function setCommand(command) {
-            messageInput.value = command;
-            messageInput.focus();
-        }
-
-        function setLoading(loading) {
-            sendButton.disabled = loading;
-            sendButton.textContent = loading ? '🤖 Expert Analyzing...' : 'Send';
+            chatInput.value = command;
+            chatInput.focus();
+            autoResize(chatInput);
         }
 
         async function sendMessage() {
-            let message = messageInput.value.trim();
+            const message = chatInput.value.trim();
             if (!message) return;
 
-            addMessage(`<strong>👤 You:</strong> ${message}`, 'user');
-            messageInput.value = '';
-            setLoading(true);
+            // Add user message
+            addMessage(message, 'user');
+
+            // Clear input
+            chatInput.value = '';
+            autoResize(chatInput);
+
+            // Disable send button and show loading
+            sendButton.disabled = true;
+            addTypingIndicator();
 
             try {
                 const response = await fetch('/chat', {
@@ -788,35 +1691,181 @@ HTML_INTERFACE = """<!DOCTYPE html>
 
                 const result = await response.json();
 
+                removeTypingIndicator();
+
+                // Add assistant response
+                addMessage(result.message, 'assistant', result.success);
+
+                // Update telemetry if available
+                if (result.telemetry) {
+                    updateTelemetry(result.telemetry);
+                }
+
+                // Show toast notification
                 if (result.success) {
-                    addMessage(`<strong>🤖 Expert:</strong> ${result.message}`, 'bot');
-                } else {
-                    addMessage(`<strong>🤖 Expert:</strong> ${result.message}`, 'error');
+                    showToast('Command processed successfully', 'success');
+                } else if (result.blocked_for_safety) {
+                    showToast('Command blocked for safety reasons', 'error');
                 }
 
             } catch (error) {
-                addMessage(`<strong>🤖 Expert:</strong> Connection error: ${error.message}`, 'error');
+                removeTypingIndicator();
+                addMessage('Connection error: ' + error.message, 'assistant', false);
+                showToast('Connection error', 'error');
             } finally {
-                setLoading(false);
+                sendButton.disabled = false;
             }
         }
 
-        messageInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && !sendButton.disabled) {
-                sendMessage();
-            }
-        });
+        function addMessage(content, type, success = true) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ' + type;
 
-        // Update status
-        function updateStatus() {
-            document.getElementById('statusText').innerHTML = `
-                <span style="color: #4caf50;">✅ Expert AI</span> |
-                <span style="color: #2196f3;">📊 Live Telemetry</span> |
-                <span style="color: #ff9800;">🛡️ Safety Active</span>
+            // Convert markdown-style formatting
+            content = formatMessage(content);
+
+            messageDiv.innerHTML = `
+                <div class="message-bubble">
+                    <div class="message-content">${content}</div>
+                </div>
+                <div class="message-time">
+                    <i class="far fa-clock"></i>
+                    <span>${new Date().toLocaleTimeString()}</span>
+                </div>
             `;
+
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        updateStatus();
+        function formatMessage(content) {
+            // Basic markdown formatting
+            content = content.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            content = content.replace(/\n/g, '<br>');
+            content = content.replace(/• /g, '<li>');
+
+            // Wrap lists
+            if (content.includes('<li>')) {
+                content = content.replace(/(<li>.*?)(<br>|$)/g, '<ul>$1</ul>');
+            }
+
+            // Add safety indicators
+            if (content.includes('SAFETY CHECK') && content.includes('✅')) {
+                content += '<div class="safety-indicator safe"><i class="fas fa-check-circle"></i> Safe to Execute</div>';
+            } else if (content.includes('SAFETY ALERT') || content.includes('🚨')) {
+                content += '<div class="safety-indicator warning"><i class="fas fa-exclamation-triangle"></i> Safety Warning</div>';
+            }
+
+            return content;
+        }
+
+        function addTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message assistant typing';
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = `
+                <div class="message-bubble">
+                    <div class="typing-indicator">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+            `;
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+
+        // Telemetry Updates
+        function updateTelemetry(telemetry) {
+            // Battery
+            const battery = telemetry.battery?.remaining_percent;
+            if (battery !== undefined) {
+                document.getElementById('batteryValue').textContent = Math.round(battery);
+                const batteryProgress = document.getElementById('batteryProgress');
+                batteryProgress.style.width = battery + '%';
+                batteryProgress.className = battery < 20 ? 'progress-fill warning' : 'progress-fill';
+            }
+
+            // Position
+            const position = telemetry.position;
+            if (position) {
+                if (position.latitude) {
+                    document.getElementById('latValue').textContent = position.latitude.toFixed(6);
+                }
+                if (position.longitude) {
+                    document.getElementById('lonValue').textContent = position.longitude.toFixed(6);
+                }
+                if (position.altitude !== undefined) {
+                    document.getElementById('altitudeValue').textContent = position.altitude.toFixed(1);
+                }
+            }
+
+            // Voltage
+            const voltage = telemetry.battery?.voltage;
+            if (voltage !== undefined) {
+                document.getElementById('voltageValue').textContent = voltage.toFixed(1);
+            }
+
+            // Flight Mode
+            if (telemetry.flight_mode) {
+                document.getElementById('flightModeValue').textContent = telemetry.flight_mode;
+            }
+
+            // Update drone icon position (simulated)
+            const droneIcon = document.getElementById('droneIcon');
+            if (position && position.relative_altitude > 0) {
+                const altitude = Math.min(position.relative_altitude / 50, 1); // Normalize to 0-1
+                droneIcon.style.bottom = (20 + altitude * 60) + '%';
+            }
+        }
+
+        // Toast Notifications
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = 'toast ' + type;
+            toast.innerHTML = `
+                <div class="toast-icon">
+                    <i class="fas ${type === 'success' ? 'fa-check' : 'fa-exclamation'}"></i>
+                </div>
+                <div>${message}</div>
+            `;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'slideUp 0.3s ease-out reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Periodic telemetry updates
+        async function fetchTelemetry() {
+            try {
+                const response = await fetch('/telemetry/1');
+                if (response.ok) {
+                    const telemetry = await response.json();
+                    updateTelemetry(telemetry);
+                }
+            } catch (error) {
+                console.error('Telemetry fetch error:', error);
+            }
+        }
+
+        // Update telemetry every 2 seconds
+        setInterval(fetchTelemetry, 2000);
+
+        // Initial telemetry fetch
+        fetchTelemetry();
+
+        // Focus on input on load
+        chatInput.focus();
     </script>
 </body>
 </html>"""
