@@ -132,7 +132,7 @@ mcp: ## Start pure MCP server (for Claude Desktop/n8n)
 mcp-web: ## Start MCP web interface
 	@echo "🌐 Starting MCP Web Interface..."
 	@echo "📱 Web interface: http://localhost:3001"
-	@cd mcp && mcp-env/bin/python web_bridge.py
+	@cd mcp && mcp-env/bin/python web_bridge_demo/web_bridge.py
 
 # =============================================================================
 # CLEANUP COMMANDS - Safe and Reliable
@@ -185,7 +185,7 @@ dev-llm: clean sitl ## Start complete LLM system (RECOMMENDED)
 	@cd server && nohup .venv/bin/python main.py > /tmp/server.log 2>&1 &
 	@sleep 3
 	@echo "🧠 Starting LLM web interface..."
-	@cd mcp && nohup mcp-env/bin/python web_bridge.py > /tmp/mcp.log 2>&1 &
+	@cd mcp && nohup mcp-env/bin/python web_bridge_demo/web_bridge.py > /tmp/mcp.log 2>&1 &
 	@sleep 2
 	@echo "✅ Complete LLM system ready!"
 	@echo ""

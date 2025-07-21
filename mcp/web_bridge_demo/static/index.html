@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DroneSphere Pro - Advanced AI Flight Control</title>
+
+    <!-- Font imports -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Our CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body data-theme="dark">
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="logo">
+                        <i class="fas fa-helicopter"></i>
+                    </div>
+                    <h1 class="brand-name">DroneSphere Pro</h1>
+                </div>
+
+                <div class="status-badges">
+                    <div class="status-badge active" id="aiStatus">
+                        <i class="fas fa-brain"></i>
+                        <span>AI Expert</span>
+                    </div>
+                    <div class="status-badge" id="telemetryStatus">
+                        <i class="fas fa-satellite-dish"></i>
+                        <span>Connecting...</span>
+                    </div>
+                    <div class="status-badge active" id="safetyStatus">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Safety Active</span>
+                    </div>
+                </div>
+
+                <div class="header-actions">
+                    <button class="theme-toggle" onclick="toggleTheme()">
+                        <i class="fas fa-moon" id="themeIcon"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Telemetry Panel -->
+            <aside class="telemetry-panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">
+                        <i class="fas fa-chart-line"></i>
+                        Live Telemetry
+                    </h2>
+                    <div class="status-badge" id="connectionStatus">
+                        <i class="fas fa-circle"></i>
+                        <span>Connecting...</span>
+                    </div>
+                </div>
+
+                <div class="telemetry-grid">
+                    <!-- Battery -->
+                    <div class="telemetry-item">
+                        <div class="telemetry-label">
+                            <i class="fas fa-battery-three-quarters"></i>
+                            Battery Level
+                        </div>
+                        <div class="telemetry-value">
+                            <span id="batteryValue">--</span><span class="telemetry-unit">%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="batteryProgress" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Altitude -->
+                    <div class="telemetry-item">
+                        <div class="telemetry-label">
+                            <i class="fas fa-arrows-alt-v"></i>
+                            Altitude (MSL)
+                        </div>
+                        <div class="telemetry-value">
+                            <span id="altitudeValue">--</span><span class="telemetry-unit">m</span>
+                        </div>
+                    </div>
+
+                    <!-- GPS -->
+                    <div class="telemetry-item">
+                        <div class="telemetry-label">
+                            <i class="fas fa-map-marker-alt"></i>
+                            GPS Position
+                        </div>
+                        <div class="telemetry-value" style="font-size: 1rem;">
+                            <div>LAT: <span id="latValue">--</span>°</div>
+                            <div>LON: <span id="lonValue">--</span>°</div>
+                        </div>
+                    </div>
+
+                    <!-- Voltage -->
+                    <div class="telemetry-item">
+                        <div class="telemetry-label">
+                            <i class="fas fa-bolt"></i>
+                            Voltage
+                        </div>
+                        <div class="telemetry-value">
+                            <span id="voltageValue">--</span><span class="telemetry-unit">V</span>
+                        </div>
+                    </div>
+
+                    <!-- Flight Mode -->
+                    <div class="telemetry-item">
+                        <div class="telemetry-label">
+                            <i class="fas fa-plane"></i>
+                            Flight Mode
+                        </div>
+                        <div class="telemetry-value" style="font-size: 1rem;">
+                            <span id="flightModeValue">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Map Visualization -->
+                <div class="map-container">
+                    <div class="map-placeholder">
+                        <div class="drone-icon" id="droneIcon">
+                            <i class="fas fa-helicopter"></i>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Chat Section -->
+            <section class="chat-section">
+                <div class="chat-header">
+                    <h2 class="panel-title">
+                        <i class="fas fa-comments"></i>
+                        AI Flight Assistant
+                    </h2>
+                </div>
+
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message assistant">
+                        <div class="message-bubble">
+                            <div class="message-content">
+                                <strong>Welcome to DroneSphere Pro!</strong> 🚁<br><br>
+                                I'm your AI flight expert with real-time telemetry awareness. I can help you with:
+                                <ul>
+                                    <li>Flight commands and navigation</li>
+                                    <li>Technical questions about your drone</li>
+                                    <li>Safety assessments and recommendations</li>
+                                    <li>Multi-language support (English, Persian, Spanish)</li>
+                                </ul>
+                                How can I assist you today?
+                            </div>
+                        </div>
+                        <div class="message-time">
+                            <i class="far fa-clock"></i>
+                            <span id="welcomeTime"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input-container">
+                    <div class="chat-input-wrapper">
+                        <textarea
+                            class="chat-input"
+                            id="chatInput"
+                            placeholder="Type your command or question..."
+                            rows="1"
+                        ></textarea>
+                        <button class="send-button" id="sendButton">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+
+                    <div class="quick-commands">
+                        <div class="quick-commands-header">Quick Commands</div>
+                        <div class="commands-grid">
+                            <div class="command-chip" onclick="setCommand('What is my battery level?')">
+                                <div class="command-icon">🔋</div>
+                                <span>Battery Status</span>
+                            </div>
+                            <div class="command-chip" onclick="setCommand('Take off to 15 meters')">
+                                <div class="command-icon">🚁</div>
+                                <span>Take Off</span>
+                            </div>
+                            <div class="command-chip" onclick="setCommand('Where am I?')">
+                                <div class="command-icon">📍</div>
+                                <span>GPS Location</span>
+                            </div>
+                            <div class="command-chip" onclick="setCommand('Land safely')">
+                                <div class="command-icon">🛬</div>
+                                <span>Land</span>
+                            </div>
+                            <div class="command-chip" onclick="setCommand('Is it safe to fly?')">
+                                <div class="command-icon">🛡️</div>
+                                <span>Safety Check</span>
+                            </div>
+                            <div class="command-chip" onclick="setCommand('Return to home')">
+                                <div class="command-icon">🏠</div>
+                                <span>RTL</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Load our JavaScript -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

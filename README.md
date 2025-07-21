@@ -198,13 +198,15 @@ Natural Language → LLM Processing → Safety Review → JSON Commands → Dron
 
 ### Component Structure
 ```
-mcp/
-├── server.py              # Pure MCP server (for Claude Desktop/n8n)
-├── web_bridge.py          # LLM-powered web interface
-├── config.yaml            # Comprehensive configuration
-├── .env                   # API keys (not committed)
-├── requirements.txt       # LLM dependencies
-└── mcp-env/              # Isolated Python environment
+web_bridge_demo/
+├── web_bridge.py          # Main Python server
+├── static/
+│   ├── css/
+│   │   └── style.css      # All styles
+│   ├── js/
+│   │   └── app.js         # All JavaScript
+│   └── index.html         # Main HTML file
+└── requirements.txt       # Python dependencies
 ```
 
 ### LLM Configuration
@@ -298,7 +300,15 @@ dronesphere/
 ├── server/               # Fleet management (unchanged)
 ├── mcp/                  # NEW: AI/LLM Integration
 │   ├── server.py         # Pure MCP server
-│   ├── web_bridge.py     # LLM-powered interface
+│   ├── web_bridge_demo/
+        ├─── web_bridge.py          # Main Python server
+    ├── static/
+    │   ├── css/
+    │   │   └── style.css      # All styles
+    │   ├── js/
+    │   │   └── app.js         # All JavaScript
+    │   └── index.html         # Main HTML file
+    └── requirements.txt       # Python dependencies
 │   ├── config.yaml       # LLM configuration
 │   ├── .env              # API keys (secret)
 │   └── mcp-env/          # Isolated environment
