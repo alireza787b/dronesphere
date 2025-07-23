@@ -45,12 +45,12 @@
 - **Docker**: For PX4 SITL simulation
 - **Python 3.10+**: With uv package manager
 - **API Key**: OpenRouter (recommended) or OpenAI
-- **Virtual Environment**: Auto-created per component
+- **UV and Virtual Environment**: Auto-created per component
 
 ### AI-Enhanced Setup
 ```bash
-# 1. Setup MCP environment with LLM
-make mcp-install
+# 1. Setup  environment with all required packages (using uv)
+make install-deps
 
 # 2. Configure API key
 cd mcp && cp .env.example .env
@@ -59,11 +59,15 @@ cd mcp && cp .env.example .env
 # 3. Start complete AI system
 make dev-llm
 
-# 4. Test everything
-make test-all-mcp
+# 4. Test if SITL, agent, server and web demo is running
+make test-demo
 
 # 🌐 Open browser: http://localhost:3001
-# Try: "take off to 15 meters" or "بلند شو به 15 متر"
+
+# ✅ dont forget to clean up after your test
+make clean-all
+
+
 ```
 
 ### Professional Development Setup

@@ -79,19 +79,72 @@ help-mcp: ## Show MCP/LLM commands
 # ENVIRONMENT SETUP - Dependencies and Installation
 # =============================================================================
 
-install-deps: ## Install all dependencies in separate environments
-	@echo "📦 Installing dependencies for all components..."
-	@echo "Installing agent dependencies..."
-	@cd agent && .venv/bin/pip install -r requirements.txt
-	@echo "Installing server dependencies..."
-	@cd server && .venv/bin/pip install -r requirements.txt
-	@echo "✅ All dependencies installed successfully"
+check-uv:
+	@command -v uv >/dev/null 2>&1 || { \
+		echo "❌ Error: uv is not installed. Please install uv first."; \
+		echo "   Visit: https://docs.astral.sh/uv/getting-started/installation/"; \
+		exit 1; \
+	}
 
-mcp-install: ## Install MCP dependencies with proper environment
+# Install all dependencies with proper error handling and cleanup
+install-deps: check-uv ## Install all component dependencies in isolated environments
+	@echo "🚀 Installing dependencies for all components..."
+	@echo "📋 Components: $(COMPONENTS)"
+	@echo ""
+	@$(MAKE) --no-print-directory _install-agent-deps
+	@$(MAKE) --no-print-directory _install-server-deps  
+	@$(MAKE) --no-print-directory _install-mcp-deps
+	@echo ""
+	@echo "✅ All dependencies installed successfully"
+	@echo "📍 Virtual environments created:"
+	@echo "   - $(AGENT_ENV)"
+	@echo "   - $(SERVER_ENV)" 
+	@echo "   - $(MCP_ENV)"
+
+# Internal target for agent dependencies
+_install-agent-deps:
+	@echo "📦 Installing agent dependencies..."
+	@if [ ! -f agent/requirements.txt ]; then \
+		echo "❌ Error: agent/requirements.txt not found"; \
+		exit 1; \
+	fi
+	@cd agent && rm -rf agent-env
+	@cd agent && uv venv agent-env
+	@cd agent && source agent-env/bin/activate && uv pip install -r requirements.txt
+	@echo "   ✓ Agent dependencies installed in $(AGENT_ENV)"
+
+# Internal target for server dependencies  
+_install-server-deps:
+	@echo "📦 Installing server dependencies..."
+	@if [ ! -f server/requirements.txt ]; then \
+		echo "❌ Error: server/requirements.txt not found"; \
+		exit 1; \
+	fi
+	@cd server && rm -rf server-env
+	@cd server && uv venv server-env
+	@cd server && source server-env/bin/activate && uv pip install -r requirements.txt
+	@echo "   ✓ Server dependencies installed in $(SERVER_ENV)"
+
+# Internal target for mcp dependencies
+_install-mcp-deps:
 	@echo "📦 Installing MCP dependencies..."
-	@cd mcp && rm -rf mcp-env && uv venv mcp-env
+	@if [ ! -f mcp/requirements.txt ]; then \
+		echo "❌ Error: mcp/requirements.txt not found"; \
+		exit 1; \
+	fi
+	@cd mcp && rm -rf mcp-env
+	@cd mcp && uv venv mcp-env
 	@cd mcp && source mcp-env/bin/activate && uv pip install -r requirements.txt
-	@echo "✅ MCP dependencies installed in mcp-env"
+	@echo "   ✓ MCP dependencies installed in $(MCP_ENV)"
+
+# Clean all virtual environments
+clean-envs: ## Remove all virtual environments
+	@echo "🧹 Cleaning virtual environments..."
+	@rm -rf $(AGENT_ENV) $(SERVER_ENV) $(MCP_ENV)
+	@echo "✅ All virtual environments cleaned"
+
+# Reinstall all dependencies (clean + install)
+reinstall-deps: clean-envs install-deps ## Clean and reinstall all dependencies
 
 # =============================================================================
 # DOCKER SERVICES - Smart Container Management
