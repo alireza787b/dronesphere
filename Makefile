@@ -90,8 +90,7 @@ install-deps: ## Install all dependencies in separate environments
 mcp-install: ## Install MCP dependencies with proper environment
 	@echo "📦 Installing MCP dependencies..."
 	@cd mcp && rm -rf mcp-env && uv venv mcp-env
-	@cd mcp && mcp-env/bin/python -m pip install --upgrade pip
-	@cd mcp && mcp-env/bin/pip install -r requirements.txt
+	@cd mcp && source mcp-env/bin/activate && uv pip install -r requirements.txt
 	@echo "✅ MCP dependencies installed in mcp-env"
 
 # =============================================================================
@@ -132,7 +131,7 @@ mcp: ## Start pure MCP server (for Claude Desktop/n8n)
 mcp-web: ## Start MCP web interface
 	@echo "🌐 Starting MCP Web Interface..."
 	@echo "📱 Web interface: http://localhost:3001"
-	@cd mcp && mcp-env/bin/python web_bridge_demo/web_bridge.py
+	@cd mcp/web_bridge_demo && ../mcp-env/bin/python web_bridge.py
 
 # =============================================================================
 # CLEANUP COMMANDS - Safe and Reliable
@@ -165,7 +164,8 @@ clean-all: clean docker-clean ## Clean everything (processes + containers)
 
 dev: clean sitl ## Start basic development environment
 	@echo "🚀 Starting basic development environment..."
-	@sleep 5
+	@echo "🚁 Starting SITL simulation..."
+	@sleep 30
 	@echo "🤖 Starting agent..."
 	@cd agent && nohup .venv/bin/python3 main.py > /tmp/agent.log 2>&1 &
 	@sleep 3
@@ -177,7 +177,8 @@ dev: clean sitl ## Start basic development environment
 
 dev-llm: clean sitl ## Start complete LLM system (RECOMMENDED)
 	@echo "🚀 Starting complete LLM development environment..."
-	@sleep 5
+	@echo "🚁 Starting SITL simulation..."
+	@sleep 30
 	@echo "🤖 Starting agent..."
 	@cd agent && nohup .venv/bin/python main.py > /tmp/agent.log 2>&1 &
 	@sleep 3
@@ -185,7 +186,7 @@ dev-llm: clean sitl ## Start complete LLM system (RECOMMENDED)
 	@cd server && nohup .venv/bin/python main.py > /tmp/server.log 2>&1 &
 	@sleep 3
 	@echo "🧠 Starting LLM web interface..."
-	@cd mcp && nohup mcp-env/bin/python web_bridge_demo/web_bridge.py > /tmp/mcp.log 2>&1 &
+	@cd mcp/web_bridge_demo && nohup ../mcp-env/bin/python web_bridge.py > /tmp/mcp.log 2>&1 &
 	@sleep 2
 	@echo "✅ Complete LLM system ready!"
 	@echo ""
