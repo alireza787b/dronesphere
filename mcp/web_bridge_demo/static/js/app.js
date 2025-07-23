@@ -4,9 +4,9 @@
 let telemetryInterval = null;
 let isConnected = false;
 // == Telemetry polling ==========================================
-const TELEMETRY_POLL_MS      = 2_000;   // 2 s
-const TELEMETRY_GRACE_FAILS = 3;       // how many misses before "Disconnected"
-let missedTelemetry          = 0;      // consecutive failures
+const TELEMETRY_POLL_MS      = 3_000;   // 2 s
+const TELEMETRY_GRACE_FAILS = 6;       // how many misses before "Disconnected"
+let missedTelemetry          = 3;      // consecutive failures
 
 // Initialize on DOM load
 document.addEventListener('DOMContentLoaded', function() {
@@ -263,7 +263,7 @@ function startTelemetryUpdates() {
 async function fetchTelemetry() {
   // --- (optional) give each request a 1.5 s timeout ---------------
   const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 1_500);
+  const t = setTimeout(() => controller.abort(), 3_500);
 
   try {
     const res = await fetch('/api/drone-telemetry', { signal: controller.signal });
