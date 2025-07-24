@@ -92,13 +92,13 @@ install-deps: check-uv ## Install all component dependencies in isolated environ
 	@echo "📋 Components: $(COMPONENTS)"
 	@echo ""
 	@$(MAKE) --no-print-directory _install-agent-deps
-	@$(MAKE) --no-print-directory _install-server-deps  
+	@$(MAKE) --no-print-directory _install-server-deps
 	@$(MAKE) --no-print-directory _install-mcp-deps
 	@echo ""
 	@echo "✅ All dependencies installed successfully"
 	@echo "📍 Virtual environments created:"
 	@echo "   - $(AGENT_ENV)"
-	@echo "   - $(SERVER_ENV)" 
+	@echo "   - $(SERVER_ENV)"
 	@echo "   - $(MCP_ENV)"
 
 # Internal target for agent dependencies
@@ -113,7 +113,7 @@ _install-agent-deps:
 	@cd agent && source agent-env/bin/activate && uv pip install -r requirements.txt
 	@echo "   ✓ Agent dependencies installed in $(AGENT_ENV)"
 
-# Internal target for server dependencies  
+# Internal target for server dependencies
 _install-server-deps:
 	@echo "📦 Installing server dependencies..."
 	@if [ ! -f server/requirements.txt ]; then \
@@ -150,8 +150,31 @@ reinstall-deps: clean-envs install-deps ## Clean and reinstall all dependencies
 # DOCKER SERVICES - Smart Container Management
 # =============================================================================
 
+# Network configuration - reads from terminal environment variables
+QGC_IP ?=
+MAVSDK_IP ?=
+
+# Build docker arguments only if IPs are provided
+DOCKER_IP_ARGS := $(strip $(if $(QGC_IP),$(QGC_IP)) $(if $(MAVSDK_IP),$(MAVSDK_IP)))
+
 sitl: ## Start SITL simulation (smart - reuse existing container)
 	@echo "🚁 Starting SITL simulation..."
+	@echo ""
+	@echo "📡 Network Configuration:"
+	@if [ -n "$(QGC_IP)" ] || [ -n "$(MAVSDK_IP)" ]; then \
+		echo "   ✅ Using custom IPs: QGC_IP='$(QGC_IP)' MAVSDK_IP='$(MAVSDK_IP)'"; \
+	else \
+		echo "   🔧 Using container defaults (no custom IPs)"; \
+		echo ""; \
+		echo "💡 To use custom IPs, export environment variables first:"; \
+		echo "   export QGC_IP=100.96.160.180"; \
+		echo "   export MAVSDK_IP=172.18.0.1"; \
+		echo "   make sitl"; \
+		echo ""; \
+		echo "   Or use inline:"; \
+		echo "   QGC_IP=100.96.160.180 MAVSDK_IP=172.18.0.1 make sitl"; \
+	fi
+	@echo ""
 	@if docker ps -a --filter "name=dronesphere-sitl" --format "{{.Names}}" | grep -q dronesphere-sitl; then \
 		if docker ps --filter "name=dronesphere-sitl" --format "{{.Names}}" | grep -q dronesphere-sitl; then \
 			echo "✅ SITL already running"; \
@@ -161,8 +184,44 @@ sitl: ## Start SITL simulation (smart - reuse existing container)
 		fi; \
 	else \
 		echo "🆕 Creating new SITL container..."; \
-		docker run -d --rm --name dronesphere-sitl jonasvautherin/px4-gazebo-headless:latest; \
+		if [ -n "$(DOCKER_IP_ARGS)" ]; then \
+			echo "🔗 Docker command: jonasvautherin/px4-gazebo-headless:latest $(DOCKER_IP_ARGS)"; \
+			docker run -d --rm --name dronesphere-sitl jonasvautherin/px4-gazebo-headless:latest $(DOCKER_IP_ARGS); \
+		else \
+			echo "🔗 Docker command: jonasvautherin/px4-gazebo-headless:latest (default networking)"; \
+			docker run -d --rm --name dronesphere-sitl jonasvautherin/px4-gazebo-headless:latest; \
+		fi; \
 	fi
+	@echo "✅ SITL simulation ready"
+
+sitl-help: ## Show SITL configuration examples and usage
+	@echo "🚁 SITL Configuration Guide"
+	@echo "=========================="
+	@echo ""
+	@echo "📋 Current Status:"
+	@echo "   QGC_IP    = '$(QGC_IP)'"
+	@echo "   MAVSDK_IP = '$(MAVSDK_IP)'"
+	@echo ""
+	@echo "🔧 Usage Examples:"
+	@echo ""
+	@echo "1️⃣  Default behavior (no custom IPs):"
+	@echo "   make sitl"
+	@echo ""
+	@echo "2️⃣  Using environment variables (persistent in session):"
+	@echo "   export QGC_IP=100.96.160.180"
+	@echo "   export MAVSDK_IP=172.18.0.1"
+	@echo "   make sitl"
+	@echo ""
+	@echo "3️⃣  Using inline variables (one-time):"
+	@echo "   QGC_IP=100.96.160.180 MAVSDK_IP=172.18.0.1 make sitl"
+	@echo ""
+	@echo "4️⃣  Using only one IP:"
+	@echo "   QGC_IP=192.168.1.100 make sitl"
+	@echo "   MAVSDK_IP=172.18.0.1 make sitl"
+	@echo ""
+	@echo "🗑️  Clear environment variables:"
+	@echo "   unset QGC_IP MAVSDK_IP"
+	@echo ""
 
 # =============================================================================
 # INDIVIDUAL SERVICES - Manual Control
