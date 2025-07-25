@@ -2,6 +2,10 @@
 
 **Professional drone command and control system with intelligent natural language interface and advanced navigation capabilities.**
 
+> **🎥 Early Look Video:**
+> [![DroneSphere v2.0 Early Look](https://img.youtube.com/vi/Ge6Z97SJcyw/0.jpg)](https://www.youtube.com/watch?v=Ge6Z97SJcyw)
+> *Watch a quick walkthrough of DroneSphere’s AI-powered drone control in action!*
+
 ## 📊 Current Status: AI-ENHANCED PRODUCTION READY ✅
 
 - **Core System**: Fully operational agent-server architecture
