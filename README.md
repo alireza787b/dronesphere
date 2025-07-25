@@ -1,6 +1,6 @@
 # 🚁 DroneSphere v2.0 - AI-Powered Drone Control System
 
-**Professional drone command and control system with intelligent natural language interface and advanced navigation capabilities.**
+**Professional drone command and control system with an intelligent natural language interface and advanced navigation capabilities.**
 
 > **🎥 Early Look Video:**
 > [![DroneSphere v2.0 Early Look](https://img.youtube.com/vi/Ge6Z97SJcyw/0.jpg)](https://www.youtube.com/watch?v=Ge6Z97SJcyw)
@@ -232,24 +232,6 @@ llm:
 - **OpenRouter** (Recommended): Supports Claude, GPT-4, many models
 - **OpenAI**: Direct GPT-4 integration
 - **Future**: Anthropic Claude Direct, Local models
-
----
-
-## 🌍 Multi-Language Support
-
-### Language Matrix
-| Language | Status | Commands | Navigation | Status Queries |
-|----------|--------|----------|------------|----------------|
-| English  | ✅ Complete | ✅ All | ✅ GPS+NED | ✅ Full |
-| Persian  | ✅ Complete | ✅ All | ✅ GPS+NED | ✅ Full |
-| Spanish  | ✅ Basic | ✅ Core | 🔄 Partial | 🔄 Partial |
-| French   | 🔄 Planned | 🔄 Core | 🔄 Planned | 🔄 Planned |
-| German   | 🔄 Planned | 🔄 Core | 🔄 Planned | 🔄 Planned |
-
-### Language Detection
-- **Automatic**: AI detects language from input
-- **Context Aware**: Maintains language consistency in conversation
-- **Fallback**: English for unsupported languages
 
 ---
 
