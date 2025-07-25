@@ -1,0 +1,182 @@
+# RTL (Return to Launch) Command Schema for AI Integration
+# Path: mcp/command_schemas/rtl.yaml
+
+name: rtl
+description: "Return to launch point and land automatically"
+category: "basic"
+
+# AI Guidelines for Intelligent Processing (following existing pattern)
+ai_guidelines:
+  safety_considerations:
+    - "Ensure sufficient battery for return journey to launch point"
+    - "Verify launch point is still safe for landing"
+    - "Check for obstacles along return path"
+    - "RTL includes automatic landing - no manual intervention needed"
+
+  user_education:
+    - "RTL automatically flies drone back to takeoff point and lands"
+    - "This is a fully autonomous return sequence with no user input needed"
+    - "Drone follows safe return path, avoiding obstacles when possible"
+    - "RTL is ideal for emergency situations or when manual control is lost"
+
+  beginner_explanation:
+    - "Think of RTL like a 'come home' button for your drone"
+    - "Drone remembers where it took off and flies back there automatically"
+    - "It will land at the same spot where it originally took off"
+    - "This is the safest way to recover your drone if you're unsure of location"
+
+  # RTL behavior intelligence
+  rtl_intelligence:
+    automatic_behavior:
+      description: "RTL is a complete autonomous sequence"
+      sequence: ["return_to_launch_point", "automatic_landing"]
+      explanation: "RTL handles both navigation and landing automatically"
+      no_user_intervention: "Once initiated, RTL completes without further commands"
+
+    when_to_suggest:
+      - "User mentions 'lost', 'bring back', 'emergency return'"
+      - "Battery getting low and drone is far from launch point"
+      - "User seems uncertain about drone location or return path"
+      - "Signal quality issues or connection problems"
+
+  common_requests:
+    - "return home"
+    - "come back"
+    - "return to launch"
+    - "bring it back"
+    - "emergency return"
+    - "rtl"
+
+# Parameter Definition (RTL has no parameters - follows existing pattern)
+parameters: {}
+
+# Safety and Robustness Rules (following existing robustness pattern)
+robustness:
+  preconditions:
+    - "Drone must be airborne (relative altitude > 0.5m)"
+    - "Launch point GPS coordinates must be available"
+    - "Sufficient battery for return journey"
+
+  failure_modes:
+    already_at_launch:
+      action: "return_success"
+      message: "Drone already at launch point - RTL not needed"
+
+    insufficient_battery:
+      action: "warn_continue"
+      message: "Battery low but should be sufficient for RTL - proceeding with return"
+
+    no_launch_point:
+      action: "error"
+      message: "Launch point not recorded - cannot execute RTL"
+
+    long_distance_rtl:
+      action: "confirm_continue"
+      message: "Drone is far from launch point - confirm RTL with current battery level"
+
+# Integration with DroneSphere Universal Protocol (following existing pattern)
+protocol_mapping:
+  dronesphere_command: "rtl"
+  parameter_mapping: {}  # No parameters for RTL command
+
+  example_request:
+    commands:
+      - name: "rtl"
+        params: {}
+        mode: "continue"
+    target_drone: 1
+    queue_mode: "override"
+
+# Multi-language Support (following existing pattern, AI handles translation)
+language_patterns:
+  english:
+    - "return home"
+    - "come back"
+    - "return to launch"
+    - "go back to start"
+    - "emergency return"
+
+  persian:
+    - "برگرد خانه"
+    - "برگرد به نقطه شروع"
+    - "بیا عقب"
+    - "برگشت اضطراری"
+
+  spanish:
+    - "volver a casa"
+    - "regresar al punto de lanzamiento"
+    - "retorno de emergencia"
+
+  french:
+    - "retour à la maison"
+    - "retour au point de lancement"
+    - "retour d'urgence"
+
+  german:
+    - "nach Hause zurückkehren"
+    - "zurück zum Startpunkt"
+    - "Notfall-Rückkehr"
+
+# Context-Aware Responses (following existing pattern)
+response_templates:
+  success:
+    normal_rtl: "✅ Return to launch initiated. Drone will automatically fly back and land at takeoff point."
+    emergency_rtl: "✅ Emergency RTL activated. Drone returning home immediately for safe recovery."
+
+  confirmation_needed:
+    long_distance: "⚠️ Drone is {distance}m from launch point. Battery at {battery}%. Proceed with RTL?"
+    low_battery: "⚠️ Battery at {battery}% - should be sufficient for return. Confirm RTL?"
+
+  progress_updates:
+    returning: "🏠 Drone returning to launch point. Estimated arrival: {time} seconds."
+    landing_approach: "🛬 Approaching launch point. Automatic landing sequence starting."
+
+  safety_reminder:
+    general: "RTL will bring drone back and land automatically at takeoff point."
+    launch_point_check: "Ensure launch point area is clear for automatic landing."
+
+# Educational Content for New Users (following existing pattern)
+education:
+  safety_tips:
+    - "RTL is your safety net - use it when unsure of drone location"
+    - "Always ensure launch point remains clear for automatic landing"
+    - "RTL works best with good GPS signal at both current and launch positions"
+    - "Monitor battery level before initiating RTL from long distances"
+
+  technical_explanation:
+    - "RTL uses GPS coordinates recorded at takeoff to navigate home"
+    - "Drone automatically adjusts altitude for obstacle avoidance if needed"
+    - "Landing sequence is fully automatic - drone detects ground and disarms"
+
+  when_to_use:
+    emergency_situations: "Lost visual contact, signal issues, low battery warnings"
+    normal_operations: "End of flight when you want automatic return and landing"
+    safety_protocol: "Any time you need guaranteed safe recovery of the drone"
+
+# Operational Intelligence
+operational_intelligence:
+  battery_management:
+    calculation: "System estimates return flight time and battery consumption"
+    safety_margin: "Recommends RTL before battery reaches critical levels"
+    warnings: "Alerts if battery may be insufficient for safe return"
+
+  flight_path:
+    optimization: "RTL typically flies direct path to launch point"
+    altitude_management: "May climb to safe altitude before returning"
+    obstacle_avoidance: "Basic obstacle avoidance during return flight"
+
+  landing_behavior:
+    precision: "Attempts to land within 2-5 meters of original takeoff point"
+    ground_detection: "Automatic ground contact detection and motor shutdown"
+    weather_adaptation: "Compensates for wind drift during landing approach"
+
+# Integration Notes for Development
+integration_notes:
+  command_class: "RTLCommand"
+  python_file: "agent/commands/rtl.py"
+  validation_method: "validate_params() - no parameters to validate"
+  execution_method: "execute() - initiates autonomous return to launch"
+
+  duration_estimation: "15-30 seconds depending on distance from launch point"
+  battery_consumption: "Moderate - depends on distance and flight conditions"
+  automation_level: "Fully autonomous - no user intervention required"

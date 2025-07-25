@@ -1,0 +1,260 @@
+# Wait Command Schema for AI Integration
+# Path: mcp/command_schemas/wait.yaml
+
+name: wait
+description: "Pause operations for specified duration with intelligent timing"
+category: "utility"
+
+# AI Guidelines for Intelligent Processing (following existing pattern)
+ai_guidelines:
+  safety_considerations:
+    - "Consider battery consumption during extended hover periods"
+    - "Account for wind conditions that may affect drone stability during wait"
+    - "Ensure wait duration is reasonable for current flight conditions"
+    - "Long waits in flight should include battery level monitoring"
+
+  user_education:
+    - "Wait pauses drone operations for precise timing control"
+    - "Drone maintains current position and altitude during wait period"
+    - "Useful for mission timing, sensor stabilization, and sequence coordination"
+    - "Wait can be inserted automatically between commands for stability"
+
+  beginner_explanation:
+    - "Think of wait like a pause button for your drone"
+    - "Drone hovers in place for the time you specify"
+    - "Useful for letting things settle before next command"
+    - "Good for taking time to plan your next move"
+
+  # KEY FEATURE: Intelligent sequence integration
+  sequence_intelligence:
+    auto_insertion:
+      description: "Automatically insert wait commands for stability"
+      scenarios:
+        - "3-second wait after takeoff for stabilization"
+        - "2-second wait between rapid command sequences"
+        - "User-specified waits in complex missions"
+      explanation: "Smart wait insertion improves flight stability and success rates"
+
+    mission_timing:
+      description: "Coordinate timing in multi-step missions"
+      examples:
+        - "takeoff → wait 3s → goto location → wait 2s → photo → land"
+        - "Formation flying with synchronized timing"
+        - "Sensor calibration delays"
+
+  common_requests:
+    - "wait X seconds"
+    - "pause for X seconds"
+    - "hold position for X seconds"
+    - "stabilize for X seconds"
+    - "delay X seconds"
+
+# Parameter Definition (following existing detailed pattern)
+parameters:
+  duration:
+    type: float
+    required: true
+    min_value: 0.1
+    max_value: 300.0
+    default: 3.0
+    unit: "seconds"
+    description: "Wait duration in seconds"
+
+    validation:
+      recommended_min: 1.0      # Minimum useful wait time
+      recommended_max: 60.0     # Practical maximum for most operations
+      battery_consideration: 120.0  # Warn for waits longer than 2 minutes
+
+    user_guidance:
+      short_waits: "1-5 seconds for stabilization and command spacing"
+      medium_waits: "5-30 seconds for sensor settling or timing coordination"
+      long_waits: "30+ seconds for extended operations (monitor battery)"
+
+  message:
+    type: string
+    required: false
+    max_length: 100
+    description: "Optional status message displayed during wait"
+    examples:
+      - "Stabilizing after takeoff"
+      - "Waiting for wind to calm"
+      - "Sensor calibration in progress"
+      - "Formation synchronization"
+
+# Safety and Robustness Rules (following existing robustness pattern)
+robustness:
+  preconditions:
+    - "Duration must be within reasonable limits (0.1-300 seconds)"
+    - "Consider battery level for extended waits"
+    - "Account for wind conditions during hover"
+
+  failure_modes:
+    duration_too_short:
+      action: "adjust_minimum"
+      message: "Minimum wait duration is 0.1 seconds"
+      auto_adjust: 0.1
+
+    duration_too_long:
+      action: "warn_confirm"
+      threshold: 120.0
+      message: "Wait duration over 2 minutes - this may consume significant battery"
+
+    low_battery_wait:
+      action: "warn_suggest"
+      threshold: 30.0
+      message: "Battery at {battery}% - consider shorter wait or landing soon"
+
+# Intelligent Wait Behavior
+intelligent_behavior:
+  stabilization_waits:
+    post_takeoff: 3.0       # Automatic wait after takeoff
+    post_navigation: 2.0    # Wait after goto commands
+    pre_landing: 1.0        # Brief wait before landing
+
+  mission_coordination:
+    photo_operations: 5.0   # Wait for camera stabilization
+    formation_sync: 10.0    # Multi-drone coordination
+    sensor_calibration: 15.0 # Extended sensor settling
+
+  battery_optimization:
+    hover_efficiency: "Minimize unnecessary waits to conserve battery"
+    wind_adaptation: "Shorter waits in windy conditions"
+    temperature_factor: "Cold weather may require longer stabilization"
+
+# Integration with DroneSphere Universal Protocol (following existing pattern)
+protocol_mapping:
+  dronesphere_command: "wait"
+  parameter_mapping:
+    duration: "duration"
+    message: "message"
+
+  example_request:
+    commands:
+      - name: "wait"
+        params:
+          duration: 5.0
+          message: "Stabilizing for navigation"
+        mode: "continue"
+    target_drone: 1
+    queue_mode: "append"
+
+  sequence_example:
+    # Example of intelligent sequence with automatic wait insertion
+    user_request: "takeoff to 15m, then go 50m north"
+    intelligent_sequence:
+      commands:
+        - name: "takeoff"
+          params:
+            altitude: 15.0
+          mode: "continue"
+        - name: "wait"
+          params:
+            duration: 3.0
+            message: "Stabilizing after takeoff"
+          mode: "continue"
+        - name: "goto"
+          params:
+            north: 50.0
+            east: 0.0
+            down: -15.0
+          mode: "continue"
+    explanation: "Added 3-second stabilization wait after takeoff for better navigation accuracy"
+
+# Multi-language Support (following existing pattern, AI handles translation)
+language_patterns:
+  english:
+    - "wait {duration} seconds"
+    - "pause for {duration} seconds"
+    - "hold position for {duration} seconds"
+    - "stabilize for {duration} seconds"
+
+  persian:
+    - "صبر کن {duration} ثانیه"
+    - "توقف {duration} ثانیه"
+    - "در همین جا بمان {duration} ثانیه"
+
+  spanish:
+    - "esperar {duration} segundos"
+    - "pausar por {duration} segundos"
+    - "mantener posición por {duration} segundos"
+
+  french:
+    - "attendre {duration} secondes"
+    - "pause pendant {duration} secondes"
+    - "maintenir la position pendant {duration} secondes"
+
+  german:
+    - "warten {duration} Sekunden"
+    - "pausieren für {duration} Sekunden"
+    - "Position halten für {duration} Sekunden"
+
+# Context-Aware Responses (following existing pattern)
+response_templates:
+  success:
+    standard_wait: "⏱️ Waiting {duration} seconds. {message}"
+    stabilization: "⏱️ Stabilizing for {duration} seconds to ensure stable flight."
+    mission_timing: "⏱️ Mission timing wait: {duration} seconds. {message}"
+
+  auto_insertion:
+    post_takeoff: "⏱️ Adding 3-second stabilization wait after takeoff for optimal performance."
+    sequence_spacing: "⏱️ Inserting brief wait between commands for stability."
+
+  battery_warning:
+    long_wait: "🔋 Battery at {battery}% - {duration}s wait will consume additional power."
+
+  completion:
+    wait_finished: "✅ Wait period completed. Ready for next command."
+
+# Educational Content for New Users (following existing pattern)
+education:
+  safety_tips:
+    - "Use wait commands to allow drone systems to stabilize"
+    - "Consider battery consumption for waits longer than 1 minute"
+    - "Wind conditions may affect drone stability during extended waits"
+    - "Wait commands help improve accuracy of subsequent navigation"
+
+  technical_explanation:
+    - "Wait maintains current position using GPS and stabilization systems"
+    - "Drone actively counteracts wind and drift during wait period"
+    - "Internal sensors continue calibrating and adjusting during wait"
+
+  best_practices:
+    mission_planning: "Include waits between major flight mode changes"
+    photography: "Use 3-5 second waits before photos for camera stabilization"
+    formation_flying: "Coordinate timing with other drones using synchronized waits"
+    battery_management: "Balance mission timing needs with battery conservation"
+
+# Timing Intelligence
+timing_intelligence:
+  automatic_optimization:
+    description: "System can automatically optimize wait durations"
+    factors:
+      - "Current wind conditions"
+      - "Battery level and consumption rate"
+      - "Mission complexity and timing requirements"
+      - "Drone stability and sensor status"
+
+  sequence_enhancement:
+    description: "Intelligent wait insertion improves mission success"
+    benefits:
+      - "Better navigation accuracy after stabilization"
+      - "Reduced command failure rates"
+      - "Smoother flight operations"
+      - "Improved photo and sensor quality"
+
+# Integration Notes for Development
+integration_notes:
+  command_class: "WaitCommand"
+  python_file: "agent/commands/wait.py"
+  validation_method: "validate_params() - validates duration and message"
+  execution_method: "execute() - uses asyncio.sleep() for precise timing"
+
+  performance_characteristics:
+    accuracy: "±0.1 seconds for durations under 60s"
+    battery_impact: "Minimal for short waits, moderate for extended periods"
+    stability_benefit: "Significantly improves subsequent command accuracy"
+
+  auto_insertion_logic:
+    triggers: "Large altitude changes, rapid command sequences, navigation commands"
+    duration_calculation: "Based on command type and flight conditions"
+    user_notification: "Always explain when waits are automatically added"

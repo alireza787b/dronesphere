@@ -66,6 +66,7 @@ POST /debug/toggle         - Toggle debug mode at runtime
 SAFETY FEATURES:
 --------------
 • Intelligent altitude preservation (maintains current altitude when not specified)
+• Remmeber in NED down is negative altitude. meaning keeping 5m altitude is down -5m.
 • Battery level monitoring with graduated warnings
 • Connection status verification
 • LLM-driven safety analysis
@@ -502,12 +503,14 @@ class EnhancedLLMController:
 • "go north AND west" = 1 command: [goto with both north and west]
 • "takeoff to 10m then hover 5 seconds then land" = 3 commands
 • Look for: then, after, next, followed by, سپس, despues
+• Its super critical the output json be clean withno extra comments or opertaion and characters.
 
 🛡️ INTELLIGENT SAFETY (LLM-DRIVEN):
 • Analyze commands logically rather than rigid rules
 • In SITL mode: focus on command accuracy over safety limits
 • Consider battery, altitude, sequence logic
 • Provide recommendations, don't just block
+• Always double check negative NED altitude values. altitude is always negative in NED. -20m means 20m altitude.
 
 🌍 MULTILINGUAL SUPPORT:
 • English: "takeoff to 15m then go 5m north"

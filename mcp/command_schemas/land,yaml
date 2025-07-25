@@ -1,0 +1,179 @@
+# Land Command Schema for AI Integration
+# Path: mcp/command_schemas/land.yaml
+
+name: land
+description: "Land drone at current position safely"
+category: "basic"
+
+# AI Guidelines for Intelligent Processing (following existing pattern)
+ai_guidelines:
+  safety_considerations:
+    - "Ensure landing area below drone is clear of people and obstacles"
+    - "Check ground surface is suitable for landing (not water, slopes, etc.)"
+    - "Verify drone has sufficient battery for safe landing sequence"
+    - "Consider wind conditions that might affect landing precision"
+
+  user_education:
+    - "Land brings drone safely to ground at current position"
+    - "Drone will descend vertically and power down rotors upon touchdown"
+    - "Always verify landing area is clear before commanding land"
+    - "For specific locations, use goto command first, then land"
+
+  beginner_explanation:
+    - "Think of land like an elevator going down to ground floor"
+    - "Drone comes straight down and stops gently on the ground"
+    - "Make sure nothing is underneath the drone before landing"
+    - "This is the safe way to end your flight"
+
+  # KEY FEATURE: Sequence Intelligence for "land at location"
+  sequence_intelligence:
+    "land at [location]":
+      description: "User wants to land at specific coordinates or location"
+      auto_sequence: ["goto", "land"]
+      llm_instruction: "First navigate to specified location, then land safely"
+      explanation: "To land at a specific location, I'll fly there first then land"
+      examples:
+        - "land at coordinates 47.398, 8.546 → goto coordinates, then land"
+        - "land at the park → goto park coordinates, then land"
+        - "land over there → ask for coordinates, goto, then land"
+
+    "emergency land":
+      description: "Immediate landing at current position"
+      auto_sequence: ["land"]
+      priority: "high"
+      explanation: "Emergency landing - immediate descent at current position"
+
+  common_requests:
+    - "land the drone"
+    - "bring it down"
+    - "come down and land"
+    - "stop flying and land"
+    - "land at [specific location]"
+    - "emergency landing"
+
+# Parameter Definition (land has no parameters - follows existing pattern)
+parameters: {}
+
+# Safety and Robustness Rules (following existing robustness pattern)
+robustness:
+  preconditions:
+    - "Drone must be airborne (relative altitude > 0.5m)"
+    - "Landing area should be visually confirmed as clear"
+    - "Sufficient battery for landing sequence"
+
+  failure_modes:
+    already_on_ground:
+      action: "return_success"
+      message: "Drone already on ground - landing not needed"
+
+    insufficient_clearance:
+      action: "warn_continue"
+      message: "Verify landing area is clear of obstacles and people"
+
+    low_battery_land:
+      action: "proceed_urgent"
+      message: "Low battery - proceeding with immediate landing for safety"
+
+# Integration with DroneSphere Universal Protocol (following existing pattern)
+protocol_mapping:
+  dronesphere_command: "land"
+  parameter_mapping: {}  # No parameters for land command
+
+  example_request:
+    commands:
+      - name: "land"
+        params: {}
+        mode: "continue"
+    target_drone: 1
+    queue_mode: "override"
+
+  sequence_example:
+    # Example of auto-generated sequence for "land at location"
+    user_request: "land at coordinates 47.398, 8.546"
+    auto_sequence:
+      commands:
+        - name: "goto"
+          params:
+            latitude: 47.398
+            longitude: 8.546
+            altitude: 503.0
+          mode: "continue"
+        - name: "land"
+          params: {}
+          mode: "continue"
+    explanation: "Navigating to coordinates first, then landing safely"
+
+# Multi-language Support (following existing pattern, AI handles translation)
+language_patterns:
+  english:
+    - "land the drone"
+    - "come down and land"
+    - "bring it down"
+    - "land at {location}"
+
+  persian:
+    - "فرود بیا"
+    - "زمین بشین"
+    - "پایین بیا و فرود بیا"
+    - "در {location} فرود بیا"
+
+  spanish:
+    - "aterrizar el dron"
+    - "bajar y aterrizar"
+    - "aterrizar en {location}"
+
+  french:
+    - "faire atterrir le drone"
+    - "descendre et atterrir"
+    - "atterrir à {location}"
+
+  german:
+    - "Drohne landen"
+    - "landen Sie die Drohne"
+    - "bei {location} landen"
+
+# Context-Aware Responses (following existing pattern)
+response_templates:
+  success:
+    simple_land: "✅ Landing completed successfully at current position. Drone safely on ground."
+    sequence_land: "✅ Navigation and landing sequence completed. Drone safely landed at target location."
+
+  confirmation_needed:
+    unclear_area: "⚠️ Please confirm the landing area below is clear of people and obstacles before proceeding."
+    high_altitude: "⚠️ Landing from {altitude}m altitude. Confirm landing area is clear and safe."
+
+  sequence_explanation:
+    land_at_location: "I'll navigate to {location} first, then land safely. This ensures precise positioning."
+
+  safety_reminder:
+    general: "Landing at current position. Please ensure area below is clear."
+    windy: "Windy conditions detected - drone may drift slightly during landing."
+
+# Educational Content for New Users (following existing pattern)
+education:
+  safety_tips:
+    - "Always visually confirm landing area is clear before commanding land"
+    - "Avoid landing on slopes, water, or unstable surfaces"
+    - "Keep spectators away from landing area during descent"
+    - "Have emergency stop ready in case of unexpected obstacles"
+
+  technical_explanation:
+    - "Landing uses precision altitude control to descend safely"
+    - "Drone automatically detects ground contact and disarms rotors"
+    - "GPS maintains horizontal position during descent in calm conditions"
+
+  sequence_education:
+    land_at_location: "When you want to land somewhere specific, the system automatically creates a safe sequence: navigate to location, then land"
+    precision_landing: "For precise landing, use GPS coordinates or clear visual references"
+
+# Integration Notes for Development
+integration_notes:
+  command_class: "LandCommand"
+  python_file: "agent/commands/land.py"
+  validation_method: "validate_params() - no parameters to validate"
+  execution_method: "execute() - checks airborne state, then lands"
+
+  sequence_integration:
+    auto_detection: "LLM detects 'land at [location]' patterns"
+    sequence_generation: "Automatically creates goto + land command sequence"
+    user_confirmation: "Explains sequence to user before execution"
