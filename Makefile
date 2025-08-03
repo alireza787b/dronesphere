@@ -412,8 +412,94 @@ test-server-takeoff: ## Test takeoff via server routing
 		-d '{"commands":[{"name":"takeoff","params":{"altitude":10},"mode":"continue"}],"target_drone":1}' \
 		| python3 -m json.tool || echo "❌ Server takeoff command failed"
 
-test-server: test-server-health test-fleet-health test-fleet-registry ## Test server functionality
 test-fleet: test-server-takeoff ## Test fleet routing capabilities
+
+# =============================================================================
+# CONFIGURATION TESTS - Dynamic YAML Configuration
+# =============================================================================
+
+test-config-load: ## Test drone configuration loading
+	@echo "📋 Testing drone configuration loading..."
+	@cd shared && python3 -c "from drone_config import FleetConfig; fc = FleetConfig(); print(f'✅ Loaded {fc.fleet_name}: {len(fc.drones)} drones'); [print(f'  {d.id}: {d.name} ({d.status})') for d in fc.drones.values()]" || echo "❌ Configuration loading failed"
+
+test-config-validation: ## Test configuration file validation
+	@echo "🔍 Testing YAML configuration validation..."
+	@python3 -c "import yaml; yaml.safe_load(open('shared/drones.yaml')); print('✅ YAML syntax valid')" || echo "❌ YAML syntax error"
+
+test-fleet-config: ## Test fleet configuration endpoint
+	@echo "⚙️  Testing fleet configuration endpoint..."
+	@curl -s http://localhost:8002/fleet/config | python3 -m json.tool || echo "❌ Fleet config endpoint failed"
+
+test-drone-info: ## Test individual drone info endpoint
+	@echo "🔍 Testing drone info endpoint..."
+	@curl -s http://localhost:8002/fleet/drones/1 | python3 -m json.tool || echo "❌ Drone info endpoint failed"
+
+test-config-reload: ## Test configuration reload endpoint
+	@echo "🔄 Testing configuration reload..."
+	@curl -X POST http://localhost:8002/fleet/config/reload | python3 -m json.tool || echo "❌ Config reload failed"
+
+test-config-all: test-config-load test-config-validation test-fleet-config test-drone-info test-config-reload ## Test all configuration features
+
+# =============================================================================
+# REGISTRY COMPARISON TESTS - Old vs New Registry
+# =============================================================================
+
+test-registry-comparison: ## Compare old hardcoded vs new YAML registry
+	@echo "🔄 Comparing Registry Systems..."
+	@echo "==============================="
+	@echo "📊 New YAML-based Registry:"
+	@curl -s http://localhost:8002/fleet/registry | python3 -c "import sys, json; data=json.load(sys.stdin); print(f'Fleet: {data[\"fleet\"][\"name\"]}'); [print(f'  {d[\"id\"]}: {d[\"name\"]} ({d[\"status\"]}) -> {d[\"endpoint\"]}') for d in data['drones'].values()]" 2>/dev/null || echo "❌ New registry unavailable"
+
+test-multi-drone-config: ## Show multi-drone configuration capability
+	@echo "🚁 Multi-Drone Configuration Test..."
+	@echo "==================================="
+	@cd shared && python3 -c "from drone_config import get_fleet_config; fc = get_fleet_config(); print(f'Total Drones: {len(fc.drones)}'); print(f'Active: {len(fc.get_active_drones())}'); print(f'Simulation: {len(fc.get_simulation_drones())}'); print(f'Hardware: {len(fc.get_hardware_drones())}'); print('\\nDrone Details:'); [print(f'  🟢 {d.name}: {d.endpoint} ({d.type})' if d.is_active else f'  🔴 {d.name}: {d.endpoint} ({d.type})') for d in fc.drones.values()]"
+
+# =============================================================================
+# YAML EDITING TESTS - Configuration Management
+# =============================================================================
+
+test-yaml-backup: ## Create backup of current configuration
+	@echo "💾 Creating configuration backup..."
+	@cp shared/drones.yaml shared/drones.yaml.backup
+	@echo "✅ Backup created: shared/drones.yaml.backup"
+
+test-yaml-restore: ## Restore configuration from backup
+	@echo "🔄 Restoring configuration from backup..."
+	@test -f shared/drones.yaml.backup && cp shared/drones.yaml.backup shared/drones.yaml && echo "✅ Configuration restored" || echo "❌ No backup found"
+
+test-activate-drone2: ## Activate second drone for multi-drone testing
+	@echo "🚁 Activating Drone 2 (Bravo-SITL)..."
+	@python3 -c "import yaml; data=yaml.safe_load(open('shared/drones.yaml')); data['drones'][2]['status']='active'; yaml.dump(data, open('shared/drones.yaml', 'w'), default_flow_style=False)"
+	@echo "✅ Drone 2 activated in configuration"
+	@curl -X POST http://localhost:8002/fleet/config/reload >/dev/null 2>&1 || true
+	@echo "🔄 Configuration reloaded on server"
+
+test-deactivate-drone2: ## Deactivate second drone
+	@echo "⏹️  Deactivating Drone 2 (Bravo-SITL)..."
+	@python3 -c "import yaml; data=yaml.safe_load(open('shared/drones.yaml')); data['drones'][2]['status']='inactive'; yaml.dump(data, open('shared/drones.yaml', 'w'), default_flow_style=False)"
+	@echo "✅ Drone 2 deactivated in configuration"
+	@curl -X POST http://localhost:8002/fleet/config/reload >/dev/null 2>&1 || true
+	@echo "🔄 Configuration reloaded on server"
+
+# =============================================================================
+# COMPREHENSIVE DYNAMIC CONFIG TESTS
+# =============================================================================
+
+test-config-complete: test-config-all test-registry-comparison test-multi-drone-config ## Complete configuration system test
+
+test-config-demo: ## Demonstrate dynamic configuration capabilities
+	@echo "🎬 Dynamic Configuration Demo"
+	@echo "============================"
+	@echo ""
+	@echo "📊 Current Configuration:"
+	@make test-multi-drone-config
+	@echo ""
+	@echo "🔄 Testing Configuration Reload:"
+	@curl -X POST http://localhost:8002/fleet/config/reload | python3 -c "import sys, json; data=json.load(sys.stdin); print(f'✅ {data[\"message\"]}'); print(f'Drones: {data[\"changes\"][\"old_drone_count\"]} -> {data[\"changes\"][\"new_drone_count\"]}')" 2>/dev/null || echo "❌ Reload failed"
+
+# Update main test commands to include config tests
+test-server: test-server-health test-fleet-health test-fleet-registry test-config-all ## Test complete server functionality with dynamic config
 
 # =============================================================================
 # COMMAND TESTS - Individual Drone Commands

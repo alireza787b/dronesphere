@@ -1,0 +1,138 @@
+# shared/drones.yaml
+# DroneSphere Fleet Configuration
+# Defines all drones in the fleet with their connection details and metadata
+
+fleet:
+  name: "DroneSphere Development Fleet"
+  version: "2.0.0"
+  description: "Multi-drone fleet for testing and development"
+  created: "2025-08-03"
+
+  # Default connection settings
+  defaults:
+    timeout: 10.0
+    retry_attempts: 3
+    health_check_interval: 30.0
+    telemetry_poll_interval: 2.0
+
+# Drone definitions
+drones:
+  1:
+    id: 1
+    name: "Alpha-SITL"
+    description: "Primary SITL development drone"
+    type: "simulation"
+    status: "active"
+
+    # Connection details
+    connection:
+      ip: "127.0.0.1"
+      port: 8001
+      protocol: "http"
+
+    # Hardware/simulation details
+    hardware:
+      model: "PX4-SITL"
+      firmware: "PX4"
+      capabilities: ["takeoff", "land", "goto", "rtl", "wait"]
+      max_altitude: 120  # meters
+      max_speed: 15      # m/s
+      battery_capacity: 5000  # mAh (simulated)
+
+    # Operational metadata
+    metadata:
+      location: "Zurich Simulation"
+      origin_gps: [47.3977508, 8.5456074, 488.0]  # lat, lon, alt_msl
+      team: "development"
+      priority: "high"
+      notes: "Primary development and testing drone"
+
+  2:
+    id: 2
+    name: "Bravo-SITL"
+    description: "Secondary SITL drone for multi-drone testing"
+    type: "simulation"
+    status: "inactive"  # Not started yet
+
+    connection:
+      ip: "127.0.0.1"
+      port: 8003  # Different port for second SITL instance
+      protocol: "http"
+
+    hardware:
+      model: "PX4-SITL"
+      firmware: "PX4"
+      capabilities: ["takeoff", "land", "goto", "rtl", "wait"]
+      max_altitude: 120
+      max_speed: 15
+      battery_capacity: 5000
+
+    metadata:
+      location: "Zurich Simulation (Offset)"
+      origin_gps: [47.3980000, 8.5460000, 488.0]  # Slightly offset
+      team: "development"
+      priority: "medium"
+      notes: "Secondary drone for formation testing"
+
+  3:
+    id: 3
+    name: "Charlie-Real"
+    description: "Physical drone placeholder"
+    type: "hardware"
+    status: "inactive"  # Not connected
+
+    connection:
+      ip: "192.168.1.100"  # Example IP for real hardware
+      port: 8001
+      protocol: "http"
+
+    hardware:
+      model: "Custom-Pixhawk"
+      firmware: "PX4"
+      capabilities: ["takeoff", "land", "goto", "rtl", "wait"]
+      max_altitude: 100  # Conservative for real hardware
+      max_speed: 10
+      battery_capacity: 3000
+
+    metadata:
+      location: "Field Operations"
+      origin_gps: [47.4000000, 8.5500000, 500.0]
+      team: "field_ops"
+      priority: "critical"
+      notes: "Reserved for real hardware testing"
+
+# Fleet-wide settings
+fleet_settings:
+  formation_flying:
+    enabled: false
+    min_separation: 5.0  # meters
+    max_drones_per_formation: 4
+
+  safety:
+    emergency_stop_all: true
+    geofence_enabled: true
+    max_fleet_altitude: 120  # meters
+    collision_avoidance: true
+
+  monitoring:
+    telemetry_retention_hours: 24
+    log_level: "info"
+    alerts_enabled: true
+    health_check_frequency: 30  # seconds
+
+# Environment configurations
+environments:
+  development:
+    active_drones: [1]  # Only Alpha-SITL active by default
+    safety_mode: "relaxed"
+    debug_logging: true
+
+  testing:
+    active_drones: [1, 2]  # Multi-drone testing
+    safety_mode: "standard"
+    debug_logging: true
+
+  production:
+    active_drones: [1, 2, 3]  # All drones
+    safety_mode: "strict"
+    debug_logging: false
