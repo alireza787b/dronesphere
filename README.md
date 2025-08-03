@@ -51,6 +51,61 @@
 - **API Key**: OpenRouter (recommended) or OpenAI
 - **UV and Virtual Environment**: Auto-created per component
 
+## 🏗️ Fleet Configuration Management
+
+### Dynamic YAML-Based Drone Fleet
+DroneSphere uses a flexible YAML configuration system for managing multiple drones:
+
+```yaml
+# shared/drones.yaml
+fleet:
+  name: "DroneSphere Development Fleet"
+  version: "2.0.0"
+
+drones:
+  1:
+    id: 1
+    name: "Alpha-SITL"
+    status: "active"
+    connection:
+      ip: "127.0.0.1"
+      port: 8001
+    hardware:
+      model: "PX4-SITL"
+      capabilities: ["takeoff", "land", "goto", "rtl", "wait"]
+    metadata:
+      location: "Zurich Simulation"
+      team: "development"
+```
+
+### Fleet Management Commands
+```bash
+# View current fleet configuration
+./scripts/manage_drones.sh list
+
+# Activate/deactivate drones
+./scripts/manage_drones.sh activate 2
+./scripts/manage_drones.sh deactivate 2
+
+# Reload configuration without restart
+./scripts/manage_drones.sh reload
+
+# Test configuration system
+make test-config-complete
+```
+
+### Fleet API Endpoints
+```bash
+# Configuration management
+GET  /fleet/config              # Complete fleet configuration
+POST /fleet/config/reload       # Hot reload from YAML
+GET  /fleet/drones/{drone_id}   # Individual drone details
+
+# Enhanced registry (with metadata)
+GET  /fleet/registry            # Rich drone registry with metadata
+GET  /fleet/health              # Health status with drone names
+```
+
 ### AI-Enhanced Setup
 ```bash
 # 1. Setup  environment with all required packages (using uv)
@@ -302,22 +357,31 @@ dronesphere/
 │   ├── config.yaml       # LLM configuration
 │   ├── .env              # API keys (secret)
 │   └── mcp-env/          # Isolated environment
-└── shared/               # Universal data models (unchanged)
-```
+├── shared/               # Universal data models + YAML configuration
+│   ├── models.py         # Shared data structures
+│   ├── drones.yaml       # 🆕 Fleet configuration
+│   └── drone_config.py   # 🆕 Configuration loader```
 
 ### Development Commands
 ```bash
 # Essential workflow
 make dev-llm              # Start complete AI system
 make status-full          # Monitor all components
-make test-all-mcp         # Validate complete system
+make test-all-mcp         # Validate complete system + AI
+make test-config-complete # Test YAML configuration system
 make clean                # Safe cleanup
+
+# Configuration management
+make test-config-load     # Test YAML loading
+make test-fleet-config    # Test configuration endpoints
+make test-multi-drone-config # Show multi-drone capabilities
 
 # Documentation
 make help                 # Essential commands
 make help-testing         # Testing workflow
 make help-mcp            # AI integration commands
 ```
+
 
 ### AI Development Guidelines
 1. **Safety First**: All AI commands must pass safety review
@@ -428,6 +492,33 @@ make clean && make dev-llm  # Complete restart
 4. **Web Interface Down**: Check port 3001 availability and MCP service
 
 ---
+
+## 🚁 Multi-Drone Fleet Management
+
+### Fleet Configuration
+- **Drone 1**: Alpha-SITL (active) - Primary development drone
+- **Drone 2**: Bravo-SITL (inactive) - Multi-drone testing
+- **Drone 3**: Charlie-Real (inactive) - Real hardware placeholder
+
+### Multi-Drone Testing
+```bash
+# Activate second drone for testing
+./scripts/manage_drones.sh activate 2
+./scripts/manage_drones.sh reload
+
+# Test multi-drone configuration
+make test-multi-drone-config
+
+# Check fleet status
+curl http://localhost:8002/fleet/health
+```
+
+### Configuration Hot Reload
+```bash
+# Modify shared/drones.yaml (add/remove/modify drones)
+# Reload without server restart
+curl -X POST http://localhost:8002/fleet/config/reload
+```
 
 ## 👨‍💻 AI Assistant Handover Guide
 
