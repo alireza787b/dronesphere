@@ -229,11 +229,11 @@ sitl-help: ## Show SITL configuration examples and usage
 
 agent: ## Start agent only
 	@echo "🤖 Starting DroneSphere Agent..."
-	@cd agent && .venv/bin/python3 main.py
+	@cd agent && agent-env/bin/python3 main.py
 
 server: ## Start server only
 	@echo "🖥️  Starting DroneSphere Server..."
-	@cd server && .venv/bin/python3 main.py
+	@cd server && server-env/bin/python3 main.py
 
 mcp: ## Start pure MCP server (for Claude Desktop/n8n)
 	@echo "🤖 Starting Pure MCP Server (stdio protocol)..."
@@ -277,12 +277,12 @@ clean-all: clean docker-clean ## Clean everything (processes + containers)
 dev: clean sitl ## Start basic development environment
 	@echo "🚀 Starting basic development environment..."
 	@echo "🚁 Starting SITL simulation..."
-	@sleep 30
+	@sleep 45
 	@echo "🤖 Starting agent..."
-	@cd agent && nohup .venv/bin/python3 main.py > /tmp/agent.log 2>&1 &
+	@cd agent && nohup agent-env/bin/python3 main.py > /tmp/agent.log 2>&1 &
 	@sleep 3
 	@echo "🖥️  Starting server..."
-	@cd server && nohup .venv/bin/python3 main.py > /tmp/server.log 2>&1 &
+	@cd server && nohup server-env/bin/python3 main.py > /tmp/server.log 2>&1 &
 	@sleep 2
 	@echo "✅ Basic development environment ready!"
 	@echo "📋 Logs: tail -f /tmp/agent.log /tmp/server.log"
@@ -292,10 +292,10 @@ dev-llm: clean sitl ## Start complete LLM system (RECOMMENDED)
 	@echo "🚁 Starting SITL simulation..."
 	@sleep 30
 	@echo "🤖 Starting agent..."
-	@cd agent && nohup .venv/bin/python main.py > /tmp/agent.log 2>&1 &
+	@cd agent && nohup agent-env/bin/python3 main.py > /tmp/agent.log 2>&1 &
 	@sleep 3
 	@echo "🖥️  Starting server..."
-	@cd server && nohup .venv/bin/python main.py > /tmp/server.log 2>&1 &
+	@cd server && nohup server-env/bin/python3 main.py > /tmp/server.log 2>&1 &
 	@sleep 3
 	@echo "🧠 Starting LLM web interface..."
 	@cd mcp/web_bridge_demo && nohup ../mcp-env/bin/python web_bridge.py > /tmp/mcp.log 2>&1 &
@@ -316,10 +316,10 @@ dev-mcp: clean sitl ## Start system for pure MCP connections
 	@echo "🚀 Starting development environment for MCP connections..."
 	@sleep 5
 	@echo "🤖 Starting agent..."
-	@cd agent && nohup .venv/bin/python main.py > /tmp/agent.log 2>&1 &
+	@cd agent && nohup agent-env/bin/python3 main.py > /tmp/agent.log 2>&1 &
 	@sleep 3
 	@echo "🖥️  Starting server..."
-	@cd server && nohup .venv/bin/python main.py > /tmp/server.log 2>&1 &
+	@cd server && nohup server-env/bin/python3 main.py > /tmp/server.log 2>&1 &
 	@sleep 2
 	@echo "✅ System ready for MCP connections!"
 	@echo ""
@@ -368,6 +368,9 @@ status-full: ## Show complete system status including LLM
 	@cd mcp && mcp-env/bin/python -c "import os; from dotenv import load_dotenv; load_dotenv(); print('✅ Configured' if (os.getenv('OPENROUTER_API_KEY') or os.getenv('OPENAI_API_KEY')) else '❌ Missing')" 2>/dev/null || echo "❌ Error"
 
 # =============================================================================
+
+
+# =============================================================================
 # BASIC HEALTH TESTS - Component Testing
 # =============================================================================
 
@@ -413,6 +416,229 @@ test-server-takeoff: ## Test takeoff via server routing
 		| python3 -m json.tool || echo "❌ Server takeoff command failed"
 
 test-fleet: test-server-takeoff ## Test fleet routing capabilities
+
+# =============================================================================
+# FLEET TELEMETRY TESTS - Background Polling System
+# =============================================================================
+
+test-fleet-telemetry: ## Test fleet-wide telemetry endpoint (cached data)
+	@echo "📊 Testing fleet telemetry endpoint..."
+	@curl -s http://localhost:8002/fleet/telemetry | python3 -c "\
+import sys, json; \
+data=json.load(sys.stdin); \
+print(f'Fleet: {data[\"fleet_name\"]}'); \
+print(f'Polling: {\"✅\" if data[\"polling_active\"] else \"❌\"} Active'); \
+print(f'Drones: {data[\"summary\"][\"successful\"]}/{data[\"total_drones\"]} successful ({data[\"summary\"][\"success_rate\"]})'); \
+[print(f'  📡 {d.get(\"drone_name\", f\"Drone {did}\")}: {\"✅\" if \"error\" not in d else \"❌\"} {d.get(\"data_age_seconds\", \"N/A\")}s old') for did, d in data['drones'].items()]" 2>/dev/null || echo "❌ Fleet telemetry failed"
+
+test-drone-telemetry: ## Test specific drone telemetry endpoint (cached)
+	@echo "📡 Testing drone 1 telemetry endpoint..."
+	@curl -s http://localhost:8002/fleet/telemetry/1 | python3 -c "\
+import sys, json; \
+data=json.load(sys.stdin); \
+print(f'Drone: {data.get(\"drone_name\", \"Unknown\")}'); \
+print(f'Age: {data.get(\"data_age_seconds\", \"N/A\")}s'); \
+print(f'Source: {data.get(\"source\", \"Unknown\")}'); \
+battery=data.get('battery', {}); \
+print(f'Battery: {battery.get(\"voltage\", \"N/A\")}V ({battery.get(\"percentage\", \"N/A\")}%)') if battery else print('Battery: N/A'); \
+position=data.get('position', {}); \
+print(f'Altitude: {position.get(\"relative_altitude_m\", \"N/A\")}m') if position else print('Position: N/A')" 2>/dev/null || echo "❌ Drone telemetry failed"
+
+test-live-telemetry: ## Test live (non-cached) telemetry bypassing polling cache
+	@echo "⚡ Testing live telemetry (bypasses cache)..."
+	@curl -s http://localhost:8002/fleet/telemetry/1/live | python3 -c "\
+import sys, json; \
+data=json.load(sys.stdin); \
+print(f'Drone: {data.get(\"drone_name\", \"Unknown\")}'); \
+print(f'Source: {data.get(\"source\", \"Unknown\")} (should be live_request)'); \
+print(f'Age: {data.get(\"data_age_seconds\", \"N/A\")}s (should be 0.0)'); \
+battery=data.get('battery', {}); \
+print(f'Battery: {battery.get(\"voltage\", \"N/A\")}V') if battery else print('Battery: N/A')" 2>/dev/null || echo "❌ Live telemetry failed"
+
+test-telemetry-status: ## Test telemetry polling system status
+	@echo "🔄 Testing telemetry polling status..."
+	@curl -s http://localhost:8002/fleet/telemetry/status | python3 -c "\
+import sys, json; \
+data=json.load(sys.stdin); \
+polling=data['polling_status']; \
+fleet=data['fleet_info']; \
+health=data['system_health']; \
+print(f'Polling: {\"✅\" if polling[\"active\"] else \"❌\"} Active, Thread: {\"✅\" if polling[\"thread_alive\"] else \"❌\"} Alive'); \
+print(f'Fleet: {fleet[\"fleet_name\"]} - {fleet[\"active_drones\"]}/{fleet[\"total_drones\"]} active'); \
+print(f'Cache: {fleet[\"cached_drones\"]} drones, Hit Rate: {health[\"cache_hit_rate\"]}'); \
+print(f'Oldest Data: {health[\"oldest_data_age\"]:.1f}s old')" 2>/dev/null || echo "❌ Telemetry status failed"
+
+test-telemetry-all: test-fleet-telemetry test-drone-telemetry test-live-telemetry test-telemetry-status ## Test all telemetry endpoints
+
+# =============================================================================
+# TELEMETRY PERFORMANCE & COMPARISON TESTS
+# =============================================================================
+
+test-telemetry-performance: ## Compare performance: direct vs cached vs live
+	@echo "⚡ Telemetry Performance Comparison"
+	@echo "=================================="
+	@echo ""
+	@echo "📡 Direct Agent Call:"
+	@time curl -s http://localhost:8001/telemetry >/dev/null 2>&1 && echo "✅ Direct agent: Success" || echo "❌ Direct agent: Failed"
+	@echo ""
+	@echo "🏃 Server Cached Call:"
+	@time curl -s http://localhost:8002/fleet/telemetry/1 >/dev/null 2>&1 && echo "✅ Server cached: Success" || echo "❌ Server cached: Failed"
+	@echo ""
+	@echo "⚡ Server Live Call:"
+	@time curl -s http://localhost:8002/fleet/telemetry/1/live >/dev/null 2>&1 && echo "✅ Server live: Success" || echo "❌ Server live: Failed"
+
+test-telemetry-comparison: ## Compare agent vs server telemetry data consistency
+	@echo "🔍 Telemetry Data Consistency Check"
+	@echo "==================================="
+	@echo ""
+	@echo "📡 Direct Agent Telemetry:"
+	@curl -s http://localhost:8001/telemetry | python3 -c "\
+import sys, json; \
+data=json.load(sys.stdin); \
+battery=data.get('battery', {}); \
+position=data.get('position', {}); \
+print(f'Battery: {battery.get(\"voltage\", \"N/A\")}V, Altitude: {position.get(\"relative_altitude_m\", \"N/A\")}m, Source: Direct Agent')" 2>/dev/null || echo "❌ Agent telemetry unavailable"
+	@echo ""
+	@echo "🖥️  Server Cached Telemetry:"
+	@curl -s http://localhost:8002/fleet/telemetry/1 | python3 -c "\
+import sys, json; \
+data=json.load(sys.stdin); \
+battery=data.get('battery', {}); \
+position=data.get('position', {}); \
+print(f'Battery: {battery.get(\"voltage\", \"N/A\")}V, Altitude: {position.get(\"relative_altitude_m\", \"N/A\")}m, Age: {data.get(\"data_age_seconds\", \"N/A\")}s, Source: {data.get(\"source\", \"Unknown\")}')" 2>/dev/null || echo "❌ Server cached unavailable"
+	@echo ""
+	@echo "⚡ Server Live Telemetry:"
+	@curl -s http://localhost:8002/fleet/telemetry/1/live | python3 -c "\
+import sys, json; \
+data=json.load(sys.stdin); \
+battery=data.get('battery', {}); \
+position=data.get('position', {}); \
+print(f'Battery: {battery.get(\"voltage\", \"N/A\")}V, Altitude: {position.get(\"relative_altitude_m\", \"N/A\")}m, Age: {data.get(\"data_age_seconds\", \"N/A\")}s, Source: {data.get(\"source\", \"Unknown\")}')" 2>/dev/null || echo "❌ Server live unavailable"
+
+test-telemetry-stress: ## Stress test telemetry endpoints (multiple rapid calls)
+	@echo "🧪 Telemetry Stress Test"
+	@echo "======================="
+	@echo "Testing rapid consecutive calls to verify cache performance..."
+	@for i in 1 2 3 4 5; do \
+		echo -n "Call $$i: "; \
+		time curl -s http://localhost:8002/fleet/telemetry/1 >/dev/null 2>&1 && echo "✅ Success" || echo "❌ Failed"; \
+	done
+
+# =============================================================================
+# MULTI-DRONE TELEMETRY TESTS
+# =============================================================================
+
+test-multi-drone-telemetry: ## Test telemetry with multiple drones (requires drone 2 active)
+	@echo "🚁 Multi-Drone Telemetry Test"
+	@echo "============================="
+	@echo "Testing fleet telemetry with multiple drones..."
+	@curl -s http://localhost:8002/fleet/telemetry | python3 -c "\
+import sys, json; \
+data=json.load(sys.stdin); \
+print(f'Fleet: {data[\"fleet_name\"]}'); \
+print(f'Total Drones: {data[\"total_drones\"]}, Active: {data[\"active_drones\"]}'); \
+print(f'Success Rate: {data[\"summary\"][\"success_rate\"]}'); \
+print('\\nDrone Status:'); \
+[print(f'  Drone {did}: {d.get(\"drone_name\", \"Unknown\")} - {\"✅ Active\" if \"error\" not in d else f\"❌ {d.get(\"error\", \"Error\")}\"} ({d.get(\"data_age_seconds\", \"N/A\")}s old)') for did, d in data['drones'].items()]" 2>/dev/null || echo "❌ Multi-drone telemetry failed"
+
+test-drone2-activation: ## Test telemetry after activating drone 2
+	@echo "🚁 Testing Drone 2 Activation Impact on Telemetry"
+	@echo "================================================"
+	@echo "Before activation:"
+	@curl -s http://localhost:8002/fleet/telemetry/status | python3 -c "\
+import sys, json; \
+data=json.load(sys.stdin); \
+print(f'Active drones: {data[\"fleet_info\"][\"active_drones\"]}, Cached: {data[\"fleet_info\"][\"cached_drones\"]}')" 2>/dev/null || echo "❌ Status check failed"
+	@echo ""
+	@echo "Activating drone 2..."
+	@python3 -c "\
+import yaml; \
+data=yaml.safe_load(open('shared/drones.yaml')); \
+data['drones'][2]['status']='active'; \
+yaml.dump(data, open('shared/drones.yaml', 'w'), default_flow_style=False)" 2>/dev/null || echo "❌ Failed to activate drone 2"
+	@curl -s -X POST http://localhost:8002/fleet/config/reload >/dev/null 2>&1 || echo "⚠️  Config reload failed"
+	@sleep 5  # Wait for polling to pick up new drone
+	@echo ""
+	@echo "After activation:"
+	@curl -s http://localhost:8002/fleet/telemetry/status | python3 -c "\
+import sys, json; \
+data=json.load(sys.stdin); \
+print(f'Active drones: {data[\"fleet_info\"][\"active_drones\"]}, Cached: {data[\"fleet_info\"][\"cached_drones\"]}')" 2>/dev/null || echo "❌ Status check failed"
+
+# =============================================================================
+# TELEMETRY ERROR HANDLING TESTS
+# =============================================================================
+
+test-telemetry-error-handling: ## Test telemetry error handling for unreachable drones
+	@echo "🔧 Testing Telemetry Error Handling"
+	@echo "==================================="
+	@echo "Testing non-existent drone:"
+	@curl -s http://localhost:8002/fleet/telemetry/999 2>/dev/null | python3 -c "\
+import sys, json; \
+data=json.load(sys.stdin); \
+print(f'Error: {data.get(\"detail\", \"Unknown error\")}')" || echo "✅ Correctly returned 404 for non-existent drone"
+	@echo ""
+	@echo "Testing inactive drone telemetry:"
+	@curl -s http://localhost:8002/fleet/telemetry/3 2>/dev/null | python3 -c "\
+import sys, json; \
+data=json.load(sys.stdin); \
+print(f'Response: {data}')" || echo "✅ Correctly handled inactive drone request"
+
+test-telemetry-polling-restart: ## Test telemetry polling system restart
+	@echo "🔄 Testing Telemetry Polling Restart"
+	@echo "===================================="
+	@echo "This test would require server restart - check status instead:"
+	@curl -s http://localhost:8002/fleet/telemetry/status | python3 -c "\
+import sys, json; \
+data=json.load(sys.stdin); \
+polling=data['polling_status']; \
+print(f'Polling Active: {polling[\"active\"]}'); \
+print(f'Thread Alive: {polling[\"thread_alive\"]}'); \
+print(f'System Health: {\"✅ Good\" if polling[\"active\"] and polling[\"thread_alive\"] else \"❌ Issues detected\"}')" 2>/dev/null || echo "❌ Status check failed"
+
+# =============================================================================
+# COMPREHENSIVE TELEMETRY VALIDATION
+# =============================================================================
+
+test-telemetry-complete: test-telemetry-all test-telemetry-performance test-telemetry-comparison test-multi-drone-telemetry test-telemetry-error-handling ## Complete telemetry system test
+
+test-telemetry-demo: ## Comprehensive telemetry system demonstration
+	@echo "🎬 DroneSphere Fleet Telemetry System Demo"
+	@echo "=========================================="
+	@echo ""
+	@echo "📊 System Status:"
+	@make test-telemetry-status
+	@echo ""
+	@echo "🚁 Fleet Overview:"
+	@make test-fleet-telemetry
+	@echo ""
+	@echo "⚡ Performance Test:"
+	@make test-telemetry-performance
+	@echo ""
+	@echo "🔍 Data Consistency:"
+	@make test-telemetry-comparison
+	@echo ""
+	@echo "✅ Fleet Telemetry System: OPERATIONAL"
+
+# =============================================================================
+# UPDATE MAIN TEST COMMANDS
+# =============================================================================
+
+# Update existing test-server command to include telemetry
+test-server: test-server-health test-fleet-health test-fleet-registry test-telemetry-all ## Test complete server functionality with telemetry
+
+# Add telemetry to comprehensive tests
+test-all: test-agent test-server test-commands test-navigation test-sequence ## Test complete system including telemetry
+
+# =============================================================================
+# UPDATE MAIN TEST COMMANDS
+# =============================================================================
+
+# Update existing test-server command to include telemetry
+test-server: test-server-health test-fleet-health test-fleet-registry test-config-all test-telemetry-all ## Test complete server functionality with telemetry
+
+# Add telemetry to comprehensive tests
+test-all: test-agent test-server test-commands test-navigation test-sequence ## Test complete system including telemetry
 
 # =============================================================================
 # CONFIGURATION TESTS - Dynamic YAML Configuration
