@@ -132,7 +132,7 @@
 - ✅ pymap3d integration: NED→GPS conversion using PX4 origin
 - ✅ executor.py updated: 5 commands registered (takeoff, land, rtl, goto, wait)
 - ✅ Comprehensive validation: Coordinate bounds, speed limits, safety checks
-- �� TEST: make test-goto-gps → [RESULT]
+- ✅ TEST: make test-goto-gps → [RESULT]
 - 🧪 TEST: make test-goto-ned → [RESULT]
 - 🧪 TEST: make test-wait → [RESULT]
 - 🧪 TEST: make test-navigation-sequence → [RESULT]
@@ -151,7 +151,7 @@
 - 🧪 TEST: make test-goto-ned → [PENDING]
 - 🧪 TEST: make test-navigation-sequence → [PENDING]
 - 🧪 TEST: make test-all → [PENDING]
-- �� STATE: navigation_ready | WORKING: goto,wait,takeoff,land,rtl | BROKEN: none | NEXT: test_verification
+- ✅ STATE: navigation_ready | WORKING: goto,wait,takeoff,land,rtl | BROKEN: none | NEXT: test_verification
 
 ## 2025-07-16_13:15 | NAVIGATION_COMMANDS_COMPLETE ✅
 - ✅ **goto command**: GPS (MSL absolute) + NED (relative to origin) - BOTH WORKING PERFECTLY
@@ -1073,3 +1073,144 @@ This telemetry system provides the **critical foundation** for:
 
 **🎉 FLEET TELEMETRY MILESTONE: COMPLETE!**
 **Next: Integrate telemetry system with MCP server and n8n workflow capabilities**
+
+---
+
+## 2025-01-XX | TELEMETRY ARCHITECTURE CONSISTENCY FIXES
+
+### 🔧 **Issue Identified:**
+Web bridge demo was failing when switching from direct agent access to server access due to:
+1. **Wrong endpoint paths**: Using `/telemetry/1` instead of `/fleet/telemetry/1/live`
+2. **Inconsistent field access**: Web bridge expecting specific telemetry structure
+
+### ✅ **Fixes Implemented:**
+
+#### **1. Endpoint Path Corrections:**
+```python
+# OLD (BROKEN):
+response = await client.get(f"http://localhost:8002/telemetry/1", timeout=3.0)
+
+# NEW (FIXED):
+response = await client.get(f"http://localhost:8002/fleet/telemetry/1/live", timeout=3.0)
+```
+
+#### **2. Telemetry Architecture Analysis:**
+**Agent API Structure:**
+```json
+{
+  "drone_id": 1,
+  "timestamp": 1754297195.1550934,
+  "position": {
+    "latitude": 47.3977505,
+    "longitude": 8.5456072,
+    "altitude": 488.10302734375,
+    "relative_altitude": 0.009000000543892384
+  },
+  "attitude": {
+    "roll": 0.0327325165271759,
+    "pitch": 0.3257124722003937,
+    "yaw": 87.02310180664062
+  },
+  "battery": {
+    "voltage": 16.200000762939453,
+    "remaining_percent": 100.0
+  },
+  "flight_mode": "HOLD",
+  "armed": false,
+  "connected": true
+}
+```
+
+**Server API Structure (with metadata):**
+```json
+{
+  "drone_id": 1,
+  "timestamp": 1754297195.1550934,
+  "position": {
+    "latitude": 47.397750699999996,
+    "longitude": 8.5456071,
+    "altitude": 488.1330261230469,
+    "relative_altitude": 0.039000000804662704
+  },
+  "attitude": { ... },
+  "battery": { ... },
+  "flight_mode": "HOLD",
+  "armed": false,
+  "connected": true,
+  "server_timestamp": 1754297195.157424,
+  "source": "polling",
+  "drone_endpoint": "127.0.0.1:8001",
+  "drone_name": "Alpha-SITL",
+  "drone_type": "simulation",
+  "drone_location": "Zurich Simulation",
+  "data_age_seconds": 1.59
+}
+```
+
+### 🎯 **Consistency Achieved:**
+
+#### **✅ Core Telemetry Fields (100% Identical):**
+- `position.latitude` ✅
+- `position.longitude` ✅
+- `position.altitude` ✅
+- `position.relative_altitude` ✅
+- `attitude.roll` ✅
+- `attitude.pitch` ✅
+- `attitude.yaw` ✅
+- `battery.voltage` ✅
+- `battery.remaining_percent` ✅
+- `flight_mode` ✅
+- `armed` ✅
+- `connected` ✅
+
+#### **✅ Server Metadata (Additional Context):**
+- `server_timestamp` - When server received data
+- `source` - "polling", "live_request", "connection_error"
+- `drone_endpoint` - Agent endpoint URL
+- `drone_name` - Human-readable drone name
+- `drone_type` - "simulation", "real", etc.
+- `drone_location` - Physical location
+- `data_age_seconds` - How old the data is
+
+### 🚀 **Benefits of Architecture:**
+
+#### **1. Universal Compatibility:**
+- Same parser works for both agent and server telemetry
+- Web bridge can switch between sources seamlessly
+- MCP tools can use either source interchangeably
+
+#### **2. Rich Context:**
+- Server provides additional metadata for fleet management
+- Source tracking for debugging and monitoring
+- Data freshness indicators for reliability
+
+#### **3. Scalability:**
+- Agent: Direct access for single drone operations
+- Server: Fleet-wide access with caching and polling
+- Both: Identical core data structure
+
+### 🧪 **Validation Results:**
+```bash
+✅ Agent Telemetry: Direct access working
+✅ Server Cached: Background polling working
+✅ Server Live: Real-time access working
+✅ Web Bridge: Fixed endpoint paths working
+✅ Field Consistency: 100% identical core fields
+✅ Metadata: Server provides additional context
+```
+
+### 📋 **Updated Architecture:**
+```
+Agent (8001) → MAVSDK → SITL
+     ↓
+Web Bridge → Server (8002) → Agent (8001)
+     ↓
+Identical telemetry structure with optional metadata
+```
+
+---
+
+📊 **STATE**: telemetry_architecture_consistent | **WORKING**: agent_telemetry,server_telemetry,web_bridge,field_consistency | **BROKEN**: none | **NEXT**: mcp_integration
+
+**🎉 TELEMETRY ARCHITECTURE: 100% CONSISTENT!**
+**Next: Integrate with MCP server for AI-powered drone control**

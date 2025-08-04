@@ -165,7 +165,9 @@ class RobustTelemetryManager:
 
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.get(f"http://localhost:8001/telemetry", timeout=3.0)
+                response = await client.get(
+                    f"http://localhost:8002/fleet/telemetry/1/live", timeout=3.0
+                )
 
                 if response.status_code == 200:
                     telemetry = response.json()
@@ -799,7 +801,9 @@ class EnhancedLLMWebBridge:
             try:
                 # First try direct telemetry service
                 async with httpx.AsyncClient() as client:
-                    response = await client.get("http://localhost:8001/telemetry", timeout=3.0)
+                    response = await client.get(
+                        "http://localhost:8002/fleet/telemetry/1/live", timeout=3.0
+                    )
                     if response.status_code == 200:
                         telemetry = response.json()
                         logger.debug("Telemetry proxy: Direct fetch successful")

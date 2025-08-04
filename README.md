@@ -188,27 +188,60 @@ curl http://localhost:8002/fleet/telemetry/1/live
 ```
 
 ### Response Format
+
+#### **Agent Telemetry (Direct Access):**
 ```json
 {
-  "fleet_name": "DroneSphere Development Fleet",
-  "polling_active": true,
-  "total_drones": 3,
-  "active_drones": 1,
-  "drones": {
-    "1": {
-      "drone_name": "Alpha-SITL",
-      "battery": {"voltage": 16.2, "percentage": 85},
-      "position": {"relative_altitude_m": 15.2},
-      "data_age_seconds": 0.41,
-      "source": "polling"
-    }
+  "drone_id": 1,
+  "timestamp": 1754297195.1550934,
+  "position": {
+    "latitude": 47.3977505,
+    "longitude": 8.5456072,
+    "altitude": 488.10302734375,
+    "relative_altitude": 0.009000000543892384
   },
-  "summary": {
-    "successful": 1,
-    "success_rate": "33.3%"
-  }
+  "attitude": {
+    "roll": 0.0327325165271759,
+    "pitch": 0.3257124722003937,
+    "yaw": 87.02310180664062
+  },
+  "battery": {
+    "voltage": 16.200000762939453,
+    "remaining_percent": 100.0
+  },
+  "flight_mode": "HOLD",
+  "armed": false,
+  "connected": true
 }
 ```
+
+#### **Server Telemetry (With Metadata):**
+```json
+{
+  "drone_id": 1,
+  "timestamp": 1754297195.1550934,
+  "position": {
+    "latitude": 47.397750699999996,
+    "longitude": 8.5456071,
+    "altitude": 488.1330261230469,
+    "relative_altitude": 0.039000000804662704
+  },
+  "attitude": { ... },
+  "battery": { ... },
+  "flight_mode": "HOLD",
+  "armed": false,
+  "connected": true,
+  "server_timestamp": 1754297195.157424,
+  "source": "polling",
+  "drone_endpoint": "127.0.0.1:8001",
+  "drone_name": "Alpha-SITL",
+  "drone_type": "simulation",
+  "drone_location": "Zurich Simulation",
+  "data_age_seconds": 1.59
+}
+```
+
+**✅ Core telemetry fields are 100% identical between agent and server!**
 
 ### Testing Commands
 ```bash
@@ -224,6 +257,30 @@ make test-multi-drone-telemetry
 # Complete telemetry validation
 make test-telemetry-complete
 ```
+
+### Telemetry Architecture Consistency
+
+The system provides **100% consistent telemetry** between direct agent access and server-mediated access:
+
+#### **✅ Identical Core Fields:**
+- `position.latitude`, `position.longitude`, `position.altitude`, `position.relative_altitude`
+- `attitude.roll`, `attitude.pitch`, `attitude.yaw`
+- `battery.voltage`, `battery.remaining_percent`
+- `flight_mode`, `armed`, `connected`
+
+#### **✅ Server Metadata (Additional Context):**
+- `server_timestamp` - When server received data
+- `source` - "polling", "live_request", "connection_error"
+- `drone_endpoint` - Agent endpoint URL
+- `drone_name` - Human-readable drone name
+- `drone_type` - "simulation", "real", etc.
+- `drone_location` - Physical location
+- `data_age_seconds` - How old the data is
+
+#### **✅ Universal Compatibility:**
+- Same parser works for both agent and server telemetry
+- Web bridge can switch between sources seamlessly
+- MCP tools can use either source interchangeably
 
 
 ## 🤖 AI-Powered Natural Language Control
