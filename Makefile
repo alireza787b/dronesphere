@@ -927,3 +927,9 @@ debug-ports: ## Debug port usage and conflicts
 	@lsof -i:8002 2>/dev/null || echo "  Port 8002 is free"
 	@echo "Port 3001 (MCP):"
 	@lsof -i:3001 2>/dev/null || echo "  Port 3001 is free"
+# Add test command to Makefile
+test-schemas-api: ## Test YAML schemas API endpoints
+	@echo "📋 Testing schemas API endpoints..."
+	@curl -s http://localhost:8002/api/schemas | jq '.metadata'
+	@curl -s http://localhost:8002/api/schemas/takeoff | jq '.schema_name'
+	@curl -s http://localhost:8002/api/schemas/mcp/tools | jq '.metadata.total_schemas'

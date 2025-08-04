@@ -16,6 +16,8 @@ import httpx
 import requests
 from fastapi import FastAPI, HTTPException
 
+from server.schemas_api import schemas_api
+
 # Add project root to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -638,3 +640,27 @@ async def get_telemetry_status() -> Dict[str, Any]:
             else 0,
         },
     }
+
+
+@app.get("/api/schemas")
+async def get_all_command_schemas() -> Dict[str, Any]:
+    """Get all command schemas for N8N MCP integration."""
+    return schemas_api.get_all_schemas()
+
+
+@app.get("/api/schemas/{schema_name}")
+async def get_command_schema(schema_name: str) -> Dict[str, Any]:
+    """Get specific command schema by name."""
+    return schemas_api.get_schema(schema_name)
+
+
+@app.get("/api/schemas/mcp/tools")
+async def get_mcp_tools_definitions() -> Dict[str, Any]:
+    """Get schemas optimized for MCP tool definitions."""
+    return schemas_api.get_schemas_for_mcp()
+
+
+@app.post("/api/schemas/cache/clear")
+async def clear_schemas_cache() -> Dict[str, Any]:
+    """Clear schemas cache (development use)."""
+    return schemas_api.clear_cache()
