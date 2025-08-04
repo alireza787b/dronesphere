@@ -1,0 +1,100 @@
+# DroneSphere Professional MCP Server Configuration
+# Port 8003 - Standards-compliant MCP server with RAG integration
+
+# =============================================================================
+# MCP Server Settings
+# =============================================================================
+mcp:
+  name: "dronesphere-professional-mcp"
+  version: "1.0.0"
+  description: "Professional MCP server for drone control with RAG and multi-LLM support"
+  port: 8003
+
+# =============================================================================
+# LLM Configuration (Multi-Provider with Fallback)
+# =============================================================================
+llm:
+  # Primary provider (OpenRouter)
+  primary:
+    provider: "openrouter"
+    base_url: "https://openrouter.ai/api/v1"
+    model: "openai/gpt-4o-mini-2024-07-18"
+    temperature: 0.1
+    max_tokens: 1200
+    timeout: 30
+
+  # Secondary provider (OpenAI)
+  secondary:
+    provider: "openai"
+    base_url: "https://api.openai.com/v1"
+    model: "gpt-4o"
+    temperature: 0.1
+    max_tokens: 1200
+    timeout: 30
+    enabled: false
+
+  # Local provider (Ollama) - Disabled for now, will be configured for remote access later
+  local:
+    provider: "ollama"
+    base_url: "http://remote-ollama-host:11434"  # Will be configured for remote access
+    model: "llama3.1:8b"
+    temperature: 0.1
+    max_tokens: 1200
+    timeout: 60
+    enabled: false  # Disabled until remote configuration is set up
+
+  # Fallback chain: primary -> secondary (local disabled for now)
+  fallback_enabled: true
+  retry_attempts: 2
+
+# =============================================================================
+# RAG Configuration
+# =============================================================================
+rag:
+  # Command schemas indexing
+  schemas:
+    enabled: false
+    source_directory: "../../shared/command_schemas"
+    index_file: "schemas_index.json"
+    update_interval: 300  # 5 minutes
+
+  # Embedding model for RAG
+  embedding_model: "text-embedding-ada-002"
+  max_context_length: 4000
+  similarity_threshold: 0.7
+
+# =============================================================================
+# DroneSphere Integration
+# =============================================================================
+dronesphere:
+  server_url: "http://localhost:8002"
+  timeout: 60.0
+  default_drone_id: 1
+  health_check_interval: 10
+
+# =============================================================================
+# Prompt Management
+# =============================================================================
+prompts:
+  # Customizable prompt layers
+  system_prompt_file: "config/prompts/system_prompt.yaml"
+  command_prompt_file: "config/prompts/command_prompt.yaml"
+  safety_prompt_file: "config/prompts/safety_prompt.yaml"
+  
+  # Prompt customization
+  enable_customization: true
+  prompt_cache_ttl: 300  # 5 minutes
+
+# =============================================================================
+# Logging and Debug
+# =============================================================================
+logging:
+  level: "INFO"
+  file: "logs/mcp_server.log"
+  max_size: "10MB"
+  backup_count: 5
+
+debug:
+  enabled: false
+  verbose_logging: false
+  command_tracing: false 

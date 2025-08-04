@@ -1,0 +1,32 @@
+# DroneSphere Professional MCP Server Dependencies
+# Core MCP and server dependencies
+mcp>=1.0.0
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.0.0
+
+# LLM and AI dependencies
+openai>=1.0.0
+anthropic>=0.7.0
+httpx>=0.25.0
+
+# RAG and vector search (lightweight for now)
+scikit-learn>=1.3.0
+numpy>=1.24.0
+
+# Configuration and utilities
+pyyaml>=6.0
+python-dotenv>=1.0.0
+python-multipart>=0.0.6
+
+# Logging and monitoring
+structlog>=23.0.0
+colorama>=0.4.6
+
+# Async and performance
+asyncio-mqtt>=0.13.0
+aiofiles>=23.0.0
+
+# Development and testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0 

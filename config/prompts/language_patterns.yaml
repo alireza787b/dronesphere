@@ -1,0 +1,480 @@
+# =============================================================================
+# Language Patterns Configuration for DroneSphere MCP Server
+# Defines multilingual patterns for sequence detection and command processing
+# 
+# SAVE AS: config/prompts/language_patterns.yaml
+# =============================================================================
+
+# =============================================================================
+# Sequence Detection Indicators (Critical for Command Parsing)
+# =============================================================================
+sequence_indicators:
+  english:
+    - "then"
+    - "and then"
+    - "after that"
+    - "next"
+    - "followed by"
+    - "after"
+    - "subsequently"
+    - "when done"
+    - "once complete"
+    - "afterwards"
+    - "when finished"
+    - "upon completion"
+
+  persian:
+    - "سپس"
+    - "آنگاه"
+    - "بعد"
+    - "پس از آن"
+    - "در ادامه"
+    - "بعد از آن"
+    - "در مرحله بعد"
+
+  spanish:
+    - "después"
+    - "luego"
+    - "entonces"
+    - "a continuación"
+    - "seguidamente"
+    - "tras eso"
+    - "posteriormente"
+
+  german:
+    - "dann"
+    - "danach"
+    - "anschließend"
+    - "nachher"
+    - "im Anschluss"
+    - "daraufhin"
+
+  french:
+    - "puis"
+    - "ensuite"
+    - "après"
+    - "par la suite"
+    - "à la suite"
+    - "subséquemment"
+
+# =============================================================================
+# Command Recognition Patterns
+# =============================================================================
+command_patterns:
+  takeoff:
+    english:
+      - "take off"
+      - "takeoff"
+      - "launch"
+      - "lift off"
+      - "go up"
+      - "ascend"
+      - "start flying"
+      - "get airborne"
+    persian:
+      - "بلند شو"
+      - "پرواز کن"
+      - "بالا برو"
+      - "شروع کن"
+      - "هوایی شو"
+    spanish:
+      - "despegar"
+      - "elevarse"
+      - "subir"
+      - "volar"
+      - "alzar vuelo"
+    german:
+      - "abheben"
+      - "starten"
+      - "hochfliegen"
+      - "aufsteigen"
+      - "in die Luft"
+    french:
+      - "décoller"
+      - "s'élever"
+      - "monter"
+      - "voler"
+      - "prendre l'air"
+
+  landing:
+    english:
+      - "land"
+      - "come down"
+      - "descend"
+      - "touch down"
+      - "return to ground"
+      - "set down"
+    persian:
+      - "فرود بیا"
+      - "پایین بیا"
+      - "زمین بنشین"
+      - "نشست کن"
+    spanish:
+      - "aterrizar"
+      - "bajar"
+      - "descender"
+      - "posarse"
+    german:
+      - "landen"
+      - "herunterkommen"
+      - "niedersetzen"
+      - "aufsetzen"
+    french:
+      - "atterrir"
+      - "descendre"
+      - "se poser"
+      - "toucher le sol"
+
+  movement:
+    english:
+      - "go to"
+      - "fly to"
+      - "move to"
+      - "navigate to"
+      - "head to"
+      - "travel to"
+      - "proceed to"
+    persian:
+      - "برو به"
+      - "حرکت کن به"
+      - "پرواز کن به"
+      - "بروی"
+    spanish:
+      - "ir a"
+      - "volar a"
+      - "moverse a"
+      - "navegar a"
+      - "dirigirse a"
+    german:
+      - "fliege zu"
+      - "gehe zu"
+      - "bewege dich zu"
+      - "navigiere zu"
+    french:
+      - "aller à"
+      - "voler vers"
+      - "se diriger vers"
+      - "naviguer vers"
+
+  wait_hover:
+    english:
+      - "wait"
+      - "hover"
+      - "pause"
+      - "hold position"
+      - "stay here"
+      - "remain"
+    persian:
+      - "صبر کن"
+      - "منتظر بمان"
+      - "معلق بمان"
+      - "توقف کن"
+    spanish:
+      - "esperar"
+      - "flotar"
+      - "pausar"
+      - "mantener posición"
+    german:
+      - "warten"
+      - "schweben"
+      - "pausieren"
+      - "position halten"
+    french:
+      - "attendre"
+      - "planer"
+      - "rester"
+      - "maintenir position"
+
+  return_home:
+    english:
+      - "return to launch"
+      - "return home"
+      - "go back"
+      - "rtl"
+      - "come back"
+    persian:
+      - "برگرد خانه"
+      - "برگرد به شروع"
+      - "بازگشت"
+    spanish:
+      - "volver a casa"
+      - "regresar al inicio"
+      - "volver"
+    german:
+      - "nach hause"
+      - "zurück zum start"
+      - "heimkehren"
+    french:
+      - "retour maison"
+      - "retour au départ"
+      - "rentrer"
+
+# =============================================================================
+# Directional Patterns
+# =============================================================================
+directional_patterns:
+  cardinal_directions:
+    english:
+      north: ["north", "northward", "to the north"]
+      south: ["south", "southward", "to the south"]
+      east: ["east", "eastward", "to the east"]
+      west: ["west", "westward", "to the west"]
+    persian:
+      north: ["شمال", "به شمال", "سمت شمال"]
+      south: ["جنوب", "به جنوب", "سمت جنوب"]
+      east: ["شرق", "به شرق", "سمت شرق"]
+      west: ["غرب", "به غرب", "سمت غرب"]
+    spanish:
+      north: ["norte", "hacia el norte", "al norte"]
+      south: ["sur", "hacia el sur", "al sur"]
+      east: ["este", "hacia el este", "al este"]
+      west: ["oeste", "hacia el oeste", "al oeste"]
+    german:
+      north: ["norden", "nach norden", "nordwärts"]
+      south: ["süden", "nach süden", "südwärts"]
+      east: ["osten", "nach osten", "ostwärts"]
+      west: ["westen", "nach westen", "westwärts"]
+    french:
+      north: ["nord", "vers le nord", "au nord"]
+      south: ["sud", "vers le sud", "au sud"]
+      east: ["est", "vers l'est", "à l'est"]
+      west: ["ouest", "vers l'ouest", "à l'ouest"]
+
+  relative_directions:
+    english:
+      forward: ["forward", "ahead", "straight"]
+      backward: ["backward", "back", "behind"]
+      left: ["left", "port"]
+      right: ["right", "starboard"]
+      up: ["up", "higher", "above"]
+      down: ["down", "lower", "below"]
+    persian:
+      forward: ["جلو", "به جلو", "مستقیم"]
+      backward: ["عقب", "به عقب", "پشت"]
+      left: ["چپ", "به چپ"]
+      right: ["راست", "به راست"]
+      up: ["بالا", "به بالا"]
+      down: ["پایین", "به پایین"]
+
+# =============================================================================
+# Measurement Unit Patterns
+# =============================================================================
+measurement_patterns:
+  distance_units:
+    metric:
+      - "meter"
+      - "meters"
+      - "metre"
+      - "metres"
+      - "m"
+      - "kilometer"
+      - "kilometers"
+      - "km"
+    imperial:
+      - "feet"
+      - "foot"
+      - "ft"
+      - "yard"
+      - "yards"
+      - "mile"
+      - "miles"
+    persian:
+      - "متر"
+      - "کیلومتر"
+    spanish:
+      - "metro"
+      - "metros"
+      - "kilómetro"
+      - "kilómetros"
+    german:
+      - "meter"
+      - "kilometer"
+    french:
+      - "mètre"
+      - "mètres"
+      - "kilomètre"
+
+  altitude_units:
+    - "meters high"
+    - "meters altitude"
+    - "feet high"
+    - "feet altitude"
+    - "متر ارتفاع"
+    - "metros de altura"
+    - "meter hoch"
+    - "mètres de hauteur"
+
+# =============================================================================
+# Time and Duration Patterns
+# =============================================================================
+time_patterns:
+  duration_units:
+    english:
+      - "second"
+      - "seconds"
+      - "minute"
+      - "minutes"
+      - "hour"
+      - "hours"
+    persian:
+      - "ثانیه"
+      - "دقیقه"
+      - "ساعت"
+    spanish:
+      - "segundo"
+      - "segundos"
+      - "minuto"
+      - "minutos"
+      - "hora"
+      - "horas"
+    german:
+      - "sekunde"
+      - "sekunden"
+      - "minute"
+      - "minuten"
+      - "stunde"
+      - "stunden"
+    french:
+      - "seconde"
+      - "secondes"
+      - "minute"
+      - "minutes"
+      - "heure"
+      - "heures"
+
+  temporal_indicators:
+    english:
+      - "for"
+      - "during"
+      - "while"
+      - "until"
+    persian:
+      - "برای"
+      - "تا"
+      - "در طول"
+    spanish:
+      - "durante"
+      - "por"
+      - "hasta"
+    german:
+      - "für"
+      - "während"
+      - "bis"
+    french:
+      - "pendant"
+      - "pour"
+      - "jusqu'à"
+
+# =============================================================================
+# Coordinate and Location Patterns
+# =============================================================================
+coordinate_patterns:
+  gps_indicators:
+    english:
+      - "GPS coordinates"
+      - "latitude and longitude"
+      - "lat lon"
+      - "coordinates"
+      - "location"
+      - "position"
+    persian:
+      - "مختصات جی پی اس"
+      - "طول و عرض جغرافیایی"
+      - "موقعیت"
+    spanish:
+      - "coordenadas GPS"
+      - "latitud y longitud"
+      - "coordenadas"
+      - "ubicación"
+    german:
+      - "GPS-Koordinaten"
+      - "Breiten- und Längengrad"
+      - "Koordinaten"
+      - "Position"
+    french:
+      - "coordonnées GPS"
+      - "latitude et longitude"
+      - "coordonnées"
+      - "position"
+
+  relative_position:
+    english:
+      - "relative to"
+      - "from here"
+      - "from current position"
+      - "offset"
+    persian:
+      - "نسبت به"
+      - "از اینجا"
+      - "از موقعیت فعلی"
+    spanish:
+      - "relativo a"
+      - "desde aquí"
+      - "desde la posición actual"
+    german:
+      - "relativ zu"
+      - "von hier"
+      - "von aktueller Position"
+    french:
+      - "relatif à"
+      - "d'ici"
+      - "depuis la position actuelle"
+
+# =============================================================================
+# Safety and Emergency Patterns
+# =============================================================================
+safety_patterns:
+  emergency_commands:
+    english:
+      - "emergency"
+      - "urgent"
+      - "immediately"
+      - "now"
+      - "stop"
+      - "abort"
+    persian:
+      - "اضطراری"
+      - "فوری"
+      - "الان"
+      - "توقف"
+    spanish:
+      - "emergencia"
+      - "urgente"
+      - "inmediatamente"
+      - "ahora"
+      - "parar"
+    german:
+      - "notfall"
+      - "dringend"
+      - "sofort"
+      - "jetzt"
+      - "stopp"
+    french:
+      - "urgence"
+      - "urgent"
+      - "immédiatement"
+      - "maintenant"
+      - "arrêt"
+
+  caution_indicators:
+    english:
+      - "carefully"
+      - "slowly"
+      - "gently"
+      - "cautiously"
+    persian:
+      - "با احتیاط"
+      - "آرام"
+      - "به آرامی"
+    spanish:
+      - "cuidadosamente"
+      - "lentamente"
+      - "suavemente"
+    german:
+      - "vorsichtig"
+      - "langsam"
+      - "sanft"
+    french:
+      - "prudemment"
+      - "lentement"
+      - "doucement"
