@@ -1,0 +1,191 @@
+# Telemetry Query Schema for MCP Integration
+# Path: shared/command_schemas/telemetry_query.yaml
+# NEW FILE - Essential for drone status monitoring via MCP
+
+name: telemetry_query
+description: "Get real-time telemetry data from drone(s)"
+category: "monitoring"
+version: "1.0.0"
+
+# MCP Tool Schema
+mcp_tool_schema:
+  type: "object"
+  properties:
+    drone_id:
+      type: "number"
+      minimum: 1
+      description: "Specific drone ID to query (optional - if omitted, returns all drones)"
+    live:
+      type: "boolean"
+      default: false
+      description: "Bypass cache for real-time data (slower but current)"
+    fields:
+      type: "array"
+      items:
+        type: "string"
+        enum: ["position", "battery", "flight_mode", "gps", "sensors", "all"]
+      default: ["all"]
+      description: "Specific telemetry fields to return"
+  additionalProperties: false
+
+# AI Guidelines
+ai_guidelines:
+  use_cases:
+    - "Check drone status before issuing commands"
+    - "Monitor battery levels during flight"
+    - "Verify GPS lock and position accuracy"
+    - "Troubleshoot flight issues"
+    - "Fleet health monitoring"
+
+  natural_language_patterns:
+    english:
+      - "what's the drone status?"
+      - "check battery level"
+      - "where is drone {id}?"
+      - "show me drone {id} telemetry"
+      - "how high is the drone?"
+      - "what's the current altitude?"
+
+    persian:
+      - "وضعیت پهپاد چطور است؟"
+      - "سطح باتری را چک کن"
+      - "پهپاد {id} کجاست؟"
+
+    spanish:
+      - "¿cuál es el estado del dron?"
+      - "verificar nivel de batería"
+      - "¿dónde está el dron {id}?"
+
+  response_interpretation:
+    battery_critical: "< 20% - Suggest landing or RTL"
+    battery_low: "20-30% - Monitor closely"
+    battery_good: "> 30% - Normal operations"
+
+    altitude_high: "> 30m - Mention visual line of sight"
+    altitude_normal: "5-30m - Good operational range"
+    altitude_low: "< 5m - Close to ground"
+
+# Response Schema Structure
+response_schema:
+  single_drone:
+    drone_id: "number"
+    drone_name: "string"
+    timestamp: "number"
+    data_age_seconds: "number"
+
+    position:
+      latitude_deg: "number"
+      longitude_deg: "number"
+      absolute_altitude_m: "number"  # MSL
+      relative_altitude_m: "number"  # Above takeoff
+
+    battery:
+      voltage_v: "number"
+      remaining_percent: "number"
+      current_a: "number"
+
+    flight_status:
+      armed: "boolean"
+      flight_mode: "string"
+      landed_state: "string"
+
+    gps:
+      fix_type: "string"
+      satellites_visible: "number"
+      horizontal_accuracy: "number"
+
+    connection:
+      connected: "boolean"
+      proxy_source: "string"  # "polling", "direct", "cached"
+
+  fleet_telemetry:
+    fleet_name: "string"
+    polling_active: "boolean"
+    total_drones: "number"
+    active_drones: "number"
+    drones: "object"  # Contains individual drone telemetry
+    summary:
+      successful: "number"
+      success_rate: "string"
+
+# Integration with Dronesphere APIs
+dronesphere_integration:
+  api_endpoints:
+    single_drone: "GET /fleet/telemetry/{drone_id}"
+    single_drone_live: "GET /fleet/telemetry/{drone_id}/live"
+    all_drones: "GET /fleet/telemetry"
+    fleet_status: "GET /fleet/telemetry/status"
+
+  caching_info:
+    cached_response_time: "~50ms"
+    live_response_time: "~2000ms"
+    cache_update_interval: "2 seconds"
+    recommendation: "Use cached for frequent queries, live for critical decisions"
+
+# Usage Examples
+usage_examples:
+  basic_status:
+    input: "what's the drone status?"
+    mcp_call: "telemetry_query"
+    params: {"drone_id": 1, "fields": ["battery", "position", "flight_mode"]}
+
+  battery_check:
+    input: "check battery level of drone 2"
+    mcp_call: "telemetry_query"
+    params: {"drone_id": 2, "fields": ["battery"], "live": true}
+
+  fleet_overview:
+    input: "show me all drone telemetry"
+    mcp_call: "telemetry_query"
+    params: {"fields": ["all"]}
+
+  position_query:
+    input: "where is drone 1?"
+    mcp_call: "telemetry_query"
+    params: {"drone_id": 1, "fields": ["position", "gps"]}
+
+# Response Templates
+response_templates:
+  battery_status: "🔋 Drone {id} Battery: {percent}% ({voltage}V) - {status_description}"
+  position_status: "📍 Drone {id} Position: {lat:.6f}, {lon:.6f} at {alt}m altitude"
+  flight_status: "✈️ Drone {id}: {armed_status} | Mode: {flight_mode} | {landed_state}"
+  connection_status: "🔗 Drone {id}: {connection_status} | Data age: {age}s"
+
+  comprehensive_status: |
+    📊 **Drone {id} ({name}) Status Report**
+
+    🔋 **Battery:** {battery_percent}% ({battery_voltage}V)
+    📍 **Position:** {latitude}, {longitude}
+    📏 **Altitude:** {relative_altitude}m above takeoff
+    ✈️ **Flight:** {flight_mode} | {armed_status}
+    🛰️ **GPS:** {gps_fix} | {satellites} satellites
+    🔗 **Connection:** {connection_status} | {data_age}s old
+
+# Multi-language Response Templates
+multilingual_responses:
+  battery_critical:
+    english: "⚠️ CRITICAL: Drone {id} battery at {percent}% - Land immediately!"
+    persian: "⚠️ بحرانی: باتری پهپاد {id} در {percent}% - فوری فرود بیایید!"
+    spanish: "⚠️ CRÍTICO: Batería del dron {id} al {percent}% - ¡Aterrizar inmediatamente!"
+
+  status_good:
+    english: "✅ Drone {id} status: All systems normal"
+    persian: "✅ وضعیت پهپاد {id}: همه سیستم‌ها عادی"
+    spanish: "✅ Estado del dron {id}: Todos los sistemas normales"
+
+# Advanced Features
+advanced_features:
+  trend_analysis:
+    battery_drain_rate: "Calculate battery consumption per minute"
+    altitude_trend: "Monitor climbing/descending patterns"
+    position_drift: "Detect GPS/positioning issues"
+
+  alerts:
+    battery_low: "Auto-alert when battery < 25%"
+    gps_lost: "Alert when GPS fix quality degrades"
+    connection_lost: "Alert when telemetry data becomes stale"
+
+  historical_data:
+    flight_time: "Track total flight duration"
+    max_altitude_reached: "Record maximum altitude in session"
+    distance_traveled: "Calculate total distance flown"

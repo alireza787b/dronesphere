@@ -1,0 +1,136 @@
+# Fleet Discovery Schema for MCP Integration
+# Path: shared/command_schemas/fleet_discovery.yaml
+# NEW FILE - Essential for multi-drone MCP operations
+
+name: fleet_discovery
+description: "Discover available drones and their capabilities"
+category: "fleet_management"
+version: "1.0.0"
+
+# MCP Tool Schema
+mcp_tool_schema:
+  type: "object"
+  properties:
+    include_inactive:
+      type: "boolean"
+      default: false
+      description: "Include inactive drones in results"
+    detailed:
+      type: "boolean"
+      default: true
+      description: "Include detailed drone specifications"
+  additionalProperties: false
+
+# AI Guidelines
+ai_guidelines:
+  use_cases:
+    - "Before issuing commands, discover available drones"
+    - "Check drone capabilities before complex missions"
+    - "Multi-drone coordination and task assignment"
+    - "Fleet health monitoring and status overview"
+
+  natural_language_patterns:
+    english:
+      - "what drones are available?"
+      - "show me the fleet"
+      - "list all drones"
+      - "which drones can I control?"
+
+    persian:
+      - "چه پهپادهایی در دسترس هستند؟"
+      - "ناوگان را نشان بده"
+
+    spanish:
+      - "¿qué drones están disponibles?"
+      - "mostrar la flota"
+
+# Response Structure
+response_schema:
+  fleet_info:
+    name: "string"
+    version: "string"
+    total_drones: "number"
+    active_drones: "number"
+
+  drones:
+    type: "object"
+    properties:
+      drone_id:
+        id: "number"
+        name: "string"
+        status: "string"  # active, inactive, maintenance
+        type: "string"    # simulation, hardware
+        capabilities: "array"  # [takeoff, land, goto, rtl, wait]
+        connection:
+          endpoint: "string"
+          status: "string"  # connected, disconnected
+        hardware:
+          model: "string"
+          max_altitude: "number"
+          battery_capacity: "number"
+        location: "string"
+
+# Integration with Dronesphere
+dronesphere_integration:
+  api_endpoint: "GET /fleet/config"
+  response_format: "yaml_fleet_config"
+
+  example_response:
+    fleet_info:
+      name: "DroneSphere Development Fleet"
+      version: "2.0.0"
+      total_drones: 3
+      active_drones: 1
+
+    drones:
+      1:
+        id: 1
+        name: "Alpha-SITL"
+        status: "active"
+        type: "simulation"
+        capabilities: ["takeoff", "land", "goto", "rtl", "wait"]
+        connection:
+          endpoint: "127.0.0.1:8001"
+          status: "connected"
+        hardware:
+          model: "PX4-SITL"
+          max_altitude: 50.0
+          battery_capacity: 5000  # mAh
+        metadata:
+          location: "Zurich Simulation"
+          team: "development"
+
+      2:
+        id: 2
+        name: "Bravo-SITL"
+        status: "inactive"
+        type: "simulation"
+        capabilities: ["takeoff", "land", "goto", "rtl", "wait"]
+        connection:
+          endpoint: "127.0.0.1:8003"
+          status: "disconnected"
+        hardware:
+          model: "PX4-SITL"
+          max_altitude: 50.0
+          battery_capacity: 5000
+        metadata:
+          location: "Test Environment"
+          team: "testing"
+
+# Usage Examples
+usage_examples:
+  basic_discovery:
+    input: "what drones are available?"
+    mcp_call: "fleet_discovery"
+    params: {"detailed": true}
+
+  quick_overview:
+    input: "show active drones only"
+    mcp_call: "fleet_discovery"
+    params: {"include_inactive": false, "detailed": false}
+
+# Response Templates
+response_templates:
+  success: "📊 Fleet Status: {active_drones}/{total_drones} drones active. Available: {drone_list}"
+  detailed: "🚁 Drone {id}: {name} ({status}) - Capabilities: {capabilities}"
+  no_drones: "❌ No drones currently available in the fleet"

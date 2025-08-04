@@ -1,0 +1,258 @@
+# Goto Command Schema for MCP Integration
+# Path: shared/command_schemas/goto.yaml
+
+name: goto
+description: "Navigate drone to specified GPS or NED coordinates"
+category: "navigation"
+version: "2.0.0"
+
+# MCP Tool Schema (JSON Schema with EITHER GPS OR NED)
+mcp_tool_schema:
+  type: "object"
+  oneOf:
+    # GPS Coordinate System
+    - properties:
+        latitude:
+          type: "number"
+          minimum: -90.0
+          maximum: 90.0
+          description: "GPS latitude in decimal degrees"
+        longitude:
+          type: "number"
+          minimum: -180.0
+          maximum: 180.0
+          description: "GPS longitude in decimal degrees"
+        altitude:
+          type: "number"
+          minimum: -500.0
+          maximum: 10000.0
+          description: "Absolute altitude above Mean Sea Level (MSL) in meters"
+        speed:
+          type: "number"
+          minimum: 0.1
+          maximum: 25.0
+          default: 5.0
+          description: "Flight speed in m/s"
+      required: ["latitude", "longitude", "altitude"]
+      additionalProperties: false
+
+    # NED Coordinate System
+    - properties:
+        north:
+          type: "number"
+          minimum: -10000.0
+          maximum: 10000.0
+          description: "North displacement from origin in meters"
+        east:
+          type: "number"
+          minimum: -10000.0
+          maximum: 10000.0
+          description: "East displacement from origin in meters"
+        down:
+          type: "number"
+          minimum: -1000.0
+          maximum: 100.0
+          description: "Down displacement from origin (negative = up)"
+        speed:
+          type: "number"
+          minimum: 0.1
+          maximum: 25.0
+          default: 5.0
+          description: "Flight speed in m/s"
+      required: ["north", "east", "down"]
+      additionalProperties: false
+
+# AI Guidelines (SIMPLIFIED for faster processing)
+ai_guidelines:
+  coordinate_system_selection:
+    auto_detect: true
+    beginner_preference: "NED"
+    expert_preference: "GPS"
+
+  quick_reference:
+    gps: "Street address system - specific global location"
+    ned: "Direction system - relative to takeoff point"
+
+  safety_priority:
+    - "Validate altitudes are reasonable for location"
+    - "Check flight path is clear of obstacles"
+    - "Ensure coordinates are within safe operating area"
+
+  # SIMPLIFIED: Natural language patterns
+  natural_language_patterns:
+    gps_indicators: ["coordinates", "latitude", "longitude", "GPS", "lat", "lon"]
+    ned_indicators: ["north", "east", "meters", "relative", "from here", "direction"]
+
+    english:
+      gps: ["go to coordinates {lat}, {lon}", "fly to GPS {lat}, {lon}, {alt}m"]
+      ned: ["go {north}m north and {east}m east", "fly {north}m north, {east}m east, {up}m up"]
+
+    persian:
+      gps: ["به مختصات {lat}, {lon} برو"]
+      ned: ["{north} متر شمال و {east} متر شرق برو"]
+
+# SIMPLIFIED Parameter Definition
+parameters:
+  # GPS System
+  gps:
+    latitude:
+      type: "float"
+      range: [-90.0, 90.0]
+      description: "GPS latitude in decimal degrees"
+    longitude:
+      type: "float"
+      range: [-180.0, 180.0]
+      description: "GPS longitude in decimal degrees"
+    altitude:
+      type: "float"
+      range: [-500.0, 10000.0]
+      unit: "meters MSL"
+      description: "Absolute altitude above sea level"
+      examples:
+        zurich_ground: 488.0
+        zurich_15m_up: 503.0
+
+  # NED System
+  ned:
+    north:
+      type: "float"
+      range: [-10000.0, 10000.0]
+      unit: "meters"
+      description: "North displacement (positive = north)"
+    east:
+      type: "float"
+      range: [-10000.0, 10000.0]
+      unit: "meters"
+      description: "East displacement (positive = east)"
+    down:
+      type: "float"
+      range: [-1000.0, 100.0]
+      unit: "meters"
+      description: "Down displacement (negative = UP, positive = down)"
+      critical_note: "Negative values go UP: -15 = 15m above origin"
+
+  # Common Optional Parameters
+  optional:
+    speed:
+      type: "float"
+      range: [0.1, 25.0]
+      default: 5.0
+      unit: "m/s"
+      recommendations:
+        beginner: 3.0
+        normal: 5.0
+        expert: 10.0
+
+# SIMPLIFIED Robustness Rules
+robustness:
+  preconditions:
+    - "Drone must be armed and airborne (altitude > 0.5m)"
+    - "Target coordinates must be reasonable and safe"
+
+  failure_modes:
+    not_airborne:
+      action: "error"
+      message: "Navigation requires drone to be airborne. Use takeoff first."
+
+    coordinates_too_far:
+      action: "warn_continue"
+      message: "Target is very far from current position"
+      distance_threshold: 1000.0  # meters
+
+    invalid_altitude:
+      action: "error"
+      message: "Target altitude unreasonable for this location"
+
+# NEW: Coordinate System Intelligence (AI Decision Making)
+coordinate_intelligence:
+  auto_detection:
+    gps_triggers:
+      - "Contains 'latitude' or 'longitude'"
+      - "Numbers in format XX.XXXXXX (6+ decimal places)"
+      - "User mentions 'coordinates' or 'GPS'"
+
+    ned_triggers:
+      - "Contains 'north', 'east' keywords"
+      - "User says 'meters' or 'from here'"
+      - "Relative direction language"
+
+  conversion_capability:
+    ned_to_gps: "Auto-convert using PX4 origin"
+    explain_to_user: true
+    show_both_systems: false  # Keep it simple
+
+# SIMPLIFIED Response Templates
+response_templates:
+  gps_success: "✅ Navigation to GPS coordinates complete! Arrived at {lat:.6f}, {lon:.6f}"
+  ned_success: "✅ Navigation complete! Moved {north}m north, {east}m east from origin"
+  coordinate_explanation: "Using {system} coordinates: {explanation}"
+
+# NEW: Usage Examples (Clear and Concise)
+usage_examples:
+  gps_navigation:
+    input: "go to coordinates 47.398, 8.546 at 503m altitude"
+    output:
+      commands:
+        - name: "goto"
+          params:
+            latitude: 47.398
+            longitude: 8.546
+            altitude: 503.0
+            speed: 5.0
+          mode: "continue"
+
+  ned_navigation:
+    input: "fly 50 meters north and 30 meters east, 15 meters up"
+    output:
+      commands:
+        - name: "goto"
+          params:
+            north: 50.0
+            east: 30.0
+            down: -15.0  # Negative = UP
+            speed: 5.0
+          mode: "continue"
+
+# NEW: Integration with Dronesphere Universal Protocol
+dronesphere_integration:
+  command_name: "goto"
+  api_endpoint: "POST /fleet/commands"
+  coordinate_systems: ["GPS", "NED"]
+
+  gps_example:
+    commands:
+      - name: "goto"
+        params:
+          latitude: 47.398
+          longitude: 8.546
+          altitude: 503.0
+          speed: 5.0
+        mode: "continue"
+    target_drone: 1
+
+  ned_example:
+    commands:
+      - name: "goto"
+        params:
+          north: 50.0
+          east: 30.0
+          down: -15.0
+          speed: 5.0
+        mode: "continue"
+    target_drone: 1
+
+# NEW: Telemetry Integration
+telemetry_requirements:
+  before_execution:
+    - "relative_altitude_m > 0.5"  # Must be airborne
+    - "gps_fix_quality"           # GPS lock required
+    - "current_position"          # For distance calculation
+
+  during_execution:
+    - "current_position"          # Monitor progress
+    - "distance_to_target"        # Arrival detection
+    - "ground_speed"              # Speed monitoring
+
+  success_criteria:
+    - "distance_to_target < acceptance_radius"
+    - "flight_mode stable (HOLD or similar)"
