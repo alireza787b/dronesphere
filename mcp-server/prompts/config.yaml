@@ -1,0 +1,39 @@
+# DroneSphere MCP Prompt Configuration
+# Easily customize safety rules and behaviors
+
+safety:
+  sitl_mode:
+    - "SIMULATION MODE: Safety limits relaxed for testing"
+    - "Battery warnings disabled in simulation"
+    - "Altitude limits extended to 500m for testing"
+
+  production_mode:
+    - "PRODUCTION MODE: Strict safety enforced"
+    - "Maximum altitude: 120 meters"
+    - "Minimum battery for operations: 20%"
+    - "Maximum speed: 25 m/s"
+    - "No operations in bad weather"
+    - "Return to launch if battery < 15%"
+
+custom_rules:
+  # Add your custom rules here
+  # Example:
+  # - "Always maintain 5m distance from obstacles"
+  # - "No flights over people"
+  # - "Maximum flight time: 20 minutes"
+
+response_style:
+  professional: "Respond professionally with technical details"
+  casual: "Respond in a friendly, conversational tone"
+  minimal: "Respond with minimal text, just confirmations"
+
+operational_zones:
+  # Define no-fly zones or restricted areas
+  restricted: []
+  # Example:
+  # - lat: 37.7749, lon: -122.4194, radius: 100  # No fly within 100m
+
+advanced:
+  sequence_limit: 10  # Maximum commands in one sequence
+  altitude_increment: 5  # Default altitude steps
+  wait_max: 300  # Maximum wait duration in seconds

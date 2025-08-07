@@ -933,3 +933,94 @@ test-schemas-api: ## Test YAML schemas API endpoints
 	@curl -s http://localhost:8002/api/schemas | jq '.metadata'
 	@curl -s http://localhost:8002/api/schemas/takeoff | jq '.schema_name'
 	@curl -s http://localhost:8002/api/schemas/mcp/tools | jq '.metadata.total_schemas'
+
+# Replace the MCP section with this final version:
+
+# =============================================================================
+# MCP SERVER COMMANDS
+# =============================================================================
+
+mcp-setup: ## Setup MCP server environment
+	@echo "🚀 Setting up MCP server..."
+	cd mcp-server && source mcp-server-env/bin/activate && \
+		uv pip install -r requirements.txt
+	@echo "✅ MCP setup complete"
+
+mcp-dev: ## Run MCP server with inspector for testing
+	@echo "🔍 Starting MCP Inspector..."
+	@echo "Opening browser at http://localhost:5173"
+	cd mcp-server && source mcp-server-env/bin/activate && \
+		DEBUG_MODE=true python -m mcp dev server.py
+
+mcp-stdio: ## Run MCP server in STDIO mode (Claude Desktop)
+	@echo "💻 Starting MCP server for Claude Desktop..."
+	cd mcp-server && source mcp-server-env/bin/activate && \
+		python server.py stdio
+
+mcp-http: ## Run MCP server in HTTP mode (n8n)
+	@echo "🌐 Starting MCP HTTP server on port 8003..."
+	cd mcp-server && source mcp-server-env/bin/activate && \
+		python server.py
+
+mcp-test: ## Quick test of MCP server setup
+	@echo "🧪 Testing MCP setup..."
+	cd mcp-server && source mcp-server-env/bin/activate && \
+		python -c "import server; print('✅ MCP imports OK')"
+
+# Complete development environment with MCP
+dev-full-mcp: ## Start SITL + Agent + Server + MCP
+	@echo "🚁 Starting Complete DroneSphere System with MCP..."
+	@echo "Step 1: Starting SITL simulator..."
+	@make sitl &
+	@sleep 5
+	@echo "Step 2: Starting Agent (port 8001)..."
+	@make agent &
+	@sleep 2
+	@echo "Step 3: Starting Server (port 8002)..."
+	@make server &
+	@sleep 2
+	@echo "Step 4: Starting MCP Server (port 8003)..."
+	@make mcp-http &
+	@sleep 2
+	@echo ""
+	@echo "✅ All systems running:"
+	@echo "  - SITL Simulator"
+	@echo "  - Agent: http://localhost:8001"
+	@echo "  - Server: http://localhost:8002"
+	@echo "  - MCP: http://localhost:8003"
+	@echo ""
+	@echo "📝 Test with: make mcp-dev (in new terminal)"
+
+# Install all dependencies including MCP
+install-deps-all: install-deps ## Install all dependencies including MCP
+	@echo "📦 Installing MCP dependencies..."
+	cd mcp-server && source mcp-server-env/bin/activate && \
+		uv pip install -r requirements.txt
+
+# Quick status check for all services
+status-mcp: ## Check status of all services including MCP
+	@echo "📊 System Status:"
+	@curl -s http://localhost:8001/health > /dev/null 2>&1 && \
+		echo "✅ Agent: Running" || echo "❌ Agent: Not running"
+	@curl -s http://localhost:8002/health > /dev/null 2>&1 && \
+		echo "✅ Server: Running" || echo "❌ Server: Not running"
+	@curl -s http://localhost:8003/health > /dev/null 2>&1 && \
+		echo "✅ MCP: Running" || echo "❌ MCP: Not running"
+
+# Claude Desktop configuration helper
+mcp-claude-config: ## Generate Claude Desktop configuration
+	@echo "📋 Add this to Claude Desktop config:"
+	@echo "Location: ~/Library/Application Support/Claude/claude_desktop_config.json"
+	@echo ""
+	@echo '{'
+	@echo '  "mcpServers": {'
+	@echo '    "dronesphere": {'
+	@echo '      "command": "python",'
+	@echo '      "args": ["'$$(pwd)'/mcp-server/server.py", "stdio"],'
+	@echo '      "env": {'
+	@echo '        "OPENROUTER_API_KEY": "YOUR_KEY",'
+	@echo '        "DRONESPHERE_SERVER_URL": "http://localhost:8002"'
+	@echo '      }'
+	@echo '    }'
+	@echo '  }'
+	@echo '}'
