@@ -38,7 +38,7 @@
     },
     {
       "parameters": {
-        "sseEndpoint": "http://62.60.206.251:8003/sse"
+        "sseEndpoint": "http://172.17.0.1:8003/sse"
       },
       "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
       "typeVersion": 1,
