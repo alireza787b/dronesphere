@@ -83,7 +83,7 @@ make mcp-n8n
 make llm-bridge  # Web UI at http://YOUR_IP:3001
 ```
 ⚠️ **Not for production** - Basic demo only, relies purely on LLM without MCP structure. Only used for quick SITL demo. Use `make mcp-n8n` for real deployments. Will be removed in v4.0.
-```
+
 
 ---
 
