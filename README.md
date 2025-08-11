@@ -35,24 +35,12 @@
 
 ## 🚀 Quick Start
 
-### For n8n Users (Production MCP)
 
-```bash
-# 1. Start core services
-make dev
 
-# 2. Start MCP server for n8n
-make mcp-n8n
-
-# 3. Configure n8n with URL: http://62.60.206.251:8003/sse
-# 4. Import workflow from mcp-server/examples/n8n-workflow.json
-```
-
-### For Developers
 
 ```bash
 # 1. Clone and setup
-git clone https://github.com/yourusername/dronesphere.git
+git clone https://github.com/alireza787b/dronesphere.git
 cd dronesphere
 make install-deps
 
@@ -61,8 +49,22 @@ cd mcp-server
 cp .env.example .env  # Edit with your keys
 
 # 3. Start development environment
-make dev              # Core services
-make mcp-inspector    # Debug UI at http://localhost:5173
+make dev              # Core services (SITL docker, Agent, Server)
+```
+
+### For MCP Developers
+```bash
+make mcp-inspector    # Debug UI at http://Your_SERVER_IP:5173
+```
+
+### For n8n Users (Production MCP)
+
+```bash
+# Start MCP server for n8n
+make mcp-n8n
+
+# 3. Configure n8n with URL: http://Your_SERVER_IP:8003/sse
+# 4. Import workflow from mcp-server/examples/n8n-workflow.json
 ```
 
 ### Test Natural Language Commands
@@ -73,6 +75,14 @@ make mcp-inspector    # Debug UI at http://localhost:5173
 "Takeoff to 10 meters"
 "Go north 5 meters then wait 3 seconds then land"
 "Emergency stop"
+```
+
+### Legacy LLM-Only Web Demo (Deprecated)
+
+```bash
+make llm-bridge  # Web UI at http://YOUR_IP:3001
+```
+⚠️ **Not for production** - Basic demo only, relies purely on LLM without MCP structure. Only used for quick SITL demo. Use `make mcp-n8n` for real deployments. Will be removed in v4.0.
 ```
 
 ---
