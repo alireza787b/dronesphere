@@ -131,8 +131,8 @@ DroneSphere v3.0 includes a production-ready **Model Context Protocol (MCP)** se
    ```
 
 2. **Configure MCP Client Tool**:
-   - Server URL: `http://62.60.206.251:8003/sse`
-   - Docker alternative: `http://172.17.0.1:8003/sse`
+   - Server URL: `http://YOU_SERVER_IP:8003/sse`
+   - Docker alternative (in n8n is installed locally on docker): `http://172.17.0.1:8003/sse`
 
 3. **Workflow Components**:
    - Chat Trigger → AI Agent → MCP Client → Drone Control
@@ -251,7 +251,7 @@ LLM_MODEL=openai/gpt-4o-mini-2024-07-18         # Or your preferred model
 LLM_MAX_TOKENS=10000
 
 # DroneSphere Configuration
-DRONESPHERE_SERVER_URL=http://localhost:8002     # Or http://62.60.206.251:8002 for remote
+DRONESPHERE_SERVER_URL=http://localhost:8002     # Or http://YOUR_SERVER_IP:8002 for remote
 SITL_MODE=true                                   # Set to false for real drones
 DEBUG_MODE=false                                 # Set to true for verbose logging
 
