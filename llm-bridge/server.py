@@ -22,12 +22,11 @@ from typing import Any, Dict, List, Optional, Sequence
 import httpx
 import yaml
 from dotenv import load_dotenv
-from openai import OpenAI
-from pydantic import BaseModel, Field
-
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import EmbeddedResource, Resource, TextContent, Tool
+from openai import OpenAI
+from pydantic import BaseModel, Field
 
 # Load environment variables
 load_dotenv()

@@ -9,7 +9,7 @@ Supports both STDIO (Claude Desktop) and HTTP (n8n) transports.
 Usage:
     python server.py          # HTTP mode for n8n (port 8003)
     python server.py stdio    # STDIO mode for Claude Desktop
-    mcp dev server.py         # Development with inspector
+    uv run mcp dev server.py  # Development with inspector
 """
 
 import asyncio
@@ -24,7 +24,6 @@ from typing import Any, Dict, List
 
 import yaml
 from dotenv import load_dotenv
-
 from mcp.server.fastmcp import Context, FastMCP
 
 # Add core module to path
@@ -39,7 +38,7 @@ load_dotenv()
 # Configure logging (CRITICAL: stderr only for STDIO mode)
 logging.basicConfig(
     level=logging.INFO if os.getenv("DEBUG_MODE") == "true" else logging.WARNING,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format='%(asctime)s - %(levelname)s - %(message)s',
     stream=sys.stderr,  # Never stdout!
 )
 logger = logging.getLogger(__name__)
@@ -253,6 +252,18 @@ async def emergency_stop(drone_id: int = 1, ctx: Context = None) -> Dict[str, An
         return {"success": False, "error": str(e)}
 
 
+@mcp.resource("health://status")
+def get_health_status() -> str:
+    """Simple health check resource for HTTP testing.
+
+    Path: mcp-server/server.py::get_health_status
+
+    Returns:
+        Health status string
+    """
+    return "MCP Server is healthy"
+
+
 @mcp.tool()
 async def health_check(ctx: Context = None) -> Dict[str, Any]:
     """Check MCP server health and connectivity.
@@ -337,16 +348,48 @@ def main():
     """Main entry point with transport selection.
 
     Path: mcp-server/server.py::main
+
+    Transports:
+    - STDIO: For Claude Desktop via SSH
+    - SSE: For n8n and mcp-remote proxy
+    - HTTP: For other clients
     """
-    # Check if running in STDIO mode for Claude Desktop
+    # Check transport mode
     if len(sys.argv) > 1 and sys.argv[1] == "stdio":
+        # STDIO mode for Claude Desktop
         logger.info("Starting in STDIO mode for Claude Desktop")
+        logger.info("Ready for Claude Desktop connection via SSH")
         mcp.run(transport="stdio")
-    else:
-        # HTTP mode for n8n and web clients
+    elif os.getenv("SSE_MODE") == "true" or (len(sys.argv) > 1 and sys.argv[1] == "sse"):
+        # SSE mode for n8n and mcp-remote
         port = int(os.getenv("MCP_PORT", 8003))
-        logger.info(f"Starting HTTP server on port {port}")
-        mcp.run(transport="streamable-http", host="0.0.0.0", port=port)
+        host = "0.0.0.0"
+
+        # Kill any existing process on this port
+        os.system(f"lsof -ti:{port} | xargs -r kill -TERM 2>/dev/null")
+
+        # Configure for SSE transport
+        mcp.settings.port = port
+        mcp.settings.host = host
+
+        logger.info(f"Starting SSE server on {host}:{port}/sse")
+        logger.info(f"For n8n: http://172.17.0.1:{port}/sse")
+        logger.info(f"For mcp-remote: http://62.60.206.251:{port}/sse")
+
+        # Use SSE transport
+        mcp.run(transport="sse")
+    else:
+        # Default HTTP mode
+        port = int(os.getenv("MCP_PORT", 8004))
+        host = "0.0.0.0"
+
+        os.system(f"lsof -ti:{port} | xargs -r kill -TERM 2>/dev/null")
+
+        mcp.settings.port = port
+        mcp.settings.host = host
+
+        logger.info(f"Starting HTTP server on {host}:{port}")
+        mcp.run(transport="streamable-http")
 
 
 if __name__ == "__main__":

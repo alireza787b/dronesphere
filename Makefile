@@ -9,7 +9,7 @@
 .PHONY: test-takeoff test-land test-rtl test-wait test-commands
 .PHONY: test-goto-gps test-goto-ned test-goto
 .PHONY: test-robustness test-sequence test-navigation test-all
-.PHONY: mcp-install mcp-config mcp mcp-web test-mcp-api test-llm test-mcp-web test-all-mcp
+.PHONY: llm-bridge-install llm-bridge-config llm-bridge llm-bridge-web test-llm-bridge-api test-llm-bridge test-llm-bridge-web test-all-llm-bridge
 .PHONY: dev-mcp dev-web dev-llm status-full claude-config clean-mcp help-mcp help-llm help-all
 
 SHELL := /bin/bash
@@ -50,7 +50,7 @@ help-testing: ## Show testing commands
 	@echo ""
 	@echo "Comprehensive Test Suites:"
 	@echo "  test-all             Run complete system test"
-	@echo "  test-all-mcp         Run all tests + MCP integration"
+	@echo "  test-all-llm-bridge         Run all tests + MCllm-bridgeP integration"
 	@echo ""
 	@echo "Individual Command Tests:"
 	@echo "  test-takeoff         Test takeoff command"
@@ -59,15 +59,15 @@ help-testing: ## Show testing commands
 	@echo "  test-goto-ned        Test relative navigation"
 	@echo "  test-sequence        Test multi-command sequences"
 
-help-mcp: ## Show MCP/LLM commands
+help-llm-bridge: ## Show llm-bridge/LLM commands
 	@echo "🧠 DroneSphere MCP/LLM Commands"
 	@echo "==============================="
 	@echo ""
 	@echo "LLM System Management:"
-	@echo "  dev-llm              Start complete LLM system"
-	@echo "  mcp-install          Install MCP dependencies"
+	@echo "  dev-llm-bridge              Start complete LLM system"
+	@echo "  llm-bridge-install          Install llm-bridge dependencies"
 	@echo "  test-llm             Test LLM integration"
-	@echo "  test-mcp-api         Test API key configuration"
+	@echo "  test-llm-bridge-api         Test API key configuration"
 	@echo ""
 	@echo "🌍 Multi-Language Support:"
 	@echo "  English: 'take off to 15 meters'"
@@ -93,13 +93,13 @@ install-deps: check-uv ## Install all component dependencies in isolated environ
 	@echo ""
 	@$(MAKE) --no-print-directory _install-agent-deps
 	@$(MAKE) --no-print-directory _install-server-deps
-	@$(MAKE) --no-print-directory _install-mcp-deps
+	@$(MAKE) --no-print-directory _install-llm-bridge-deps
 	@echo ""
 	@echo "✅ All dependencies installed successfully"
 	@echo "📍 Virtual environments created:"
 	@echo "   - $(AGENT_ENV)"
 	@echo "   - $(SERVER_ENV)"
-	@echo "   - $(MCP_ENV)"
+	@echo "   - $(LLM_BRIDGE_ENV)"
 
 # Internal target for agent dependencies
 _install-agent-deps:
@@ -125,22 +125,22 @@ _install-server-deps:
 	@cd server && source server-env/bin/activate && uv pip install -r requirements.txt
 	@echo "   ✓ Server dependencies installed in $(SERVER_ENV)"
 
-# Internal target for mcp dependencies
-_install-mcp-deps:
-	@echo "📦 Installing MCP dependencies..."
-	@if [ ! -f mcp/requirements.txt ]; then \
-		echo "❌ Error: mcp/requirements.txt not found"; \
+# Internal target for llm-bridge dependencies
+_install-llm-bridge-deps:
+	@echo "📦 Installing llm-bridge dependencies..."
+	@if [ ! -f llm-bridge/requirements.txt ]; then \
+		echo "❌ Error: llm-bridge/requirements.txt not found"; \
 		exit 1; \
 	fi
-	@cd mcp && rm -rf mcp-env
-	@cd mcp && uv venv mcp-env
-	@cd mcp && source mcp-env/bin/activate && uv pip install -r requirements.txt
-	@echo "   ✓ MCP dependencies installed in $(MCP_ENV)"
+	@cd llm-bridge && rm -rf llm-bridge-env
+	@cd llm-bridge && uv venv llm-bridge-env
+	@cd llm-bridge && source llm-bridge-env/bin/activate && uv pip install -r requirements.txt
+	@echo "   ✓ llm-bridge dependencies installed in $(LLM_BRIDGE_ENV)"
 
 # Clean all virtual environments
 clean-envs: ## Remove all virtual environments
 	@echo "🧹 Cleaning virtual environments..."
-	@rm -rf $(AGENT_ENV) $(SERVER_ENV) $(MCP_ENV)
+	@rm -rf $(AGENT_ENV) $(SERVER_ENV) $(LLM_BRIDGE_ENV)
 	@echo "✅ All virtual environments cleaned"
 
 # Reinstall all dependencies (clean + install)
@@ -235,59 +235,75 @@ server: ## Start server only
 	@echo "🖥️  Starting DroneSphere Server..."
 	@cd server && server-env/bin/python3 main.py
 
-mcp: ## Start pure MCP server (for Claude Desktop/n8n)
+llm-bridge: ## Start pure MCP server (for Claude Desktop/n8n)
 	@echo "🤖 Starting Pure MCP Server (stdio protocol)..."
 	@echo "🔗 Connects to Claude Desktop, n8n, and other MCP tools"
-	@cd mcp && mcp-env/bin/python server.py
+	@cd llm-bridge && llm-bridge-env/bin/python server.py
 
-mcp-web: ## Start MCP web interface
-	@echo "🌐 Starting MCP Web Interface..."
+llm-bridge-web: ## Start llm-bridge web interface
+	@echo "🌐 Starting llm-bridge Web Interface..."
 	@echo "📱 Web interface: http://localhost:3001"
-	@cd mcp/web_bridge_demo && ../mcp-env/bin/python web_bridge.py
+	@cd llm-bridge/web_bridge_demo && ../llm-bridge-env/bin/python web_bridge.py
 
 # =============================================================================
 # CLEANUP COMMANDS - Safe and Reliable
 # =============================================================================
 
-clean: ## Stop all services safely (primary cleanup method)
+
+clean-llm-bridge: ## Stop MCP processes only
+	@echo "🧹 Stopping MCP processes..."
+	@lsof -ti:3001 | xargs -r kill -TERM 2>/dev/null || true
+	@echo "✅ llm-bridge processes stopped"
+
+
+
+clean: ## Stop all services safely
 	@echo "🧹 Stopping all DroneSphere services..."
 	@lsof -ti:8001 | xargs -r kill -TERM 2>/dev/null || true
 	@lsof -ti:8002 | xargs -r kill -TERM 2>/dev/null || true
+	@lsof -ti:8003 | xargs -r kill -TERM 2>/dev/null || true
+	@lsof -ti:8004 | xargs -r kill -TERM 2>/dev/null || true
 	@lsof -ti:3001 | xargs -r kill -TERM 2>/dev/null || true
+	@lsof -ti:5173 | xargs -r kill -TERM 2>/dev/null || true
 	@sleep 1
 	@echo "✅ All services stopped safely"
 
-clean-mcp: ## Stop MCP processes only
-	@echo "🧹 Stopping MCP processes..."
-	@lsof -ti:3001 | xargs -r kill -TERM 2>/dev/null || true
-	@echo "✅ MCP processes stopped"
-
 docker-clean: ## Stop and remove docker containers
-	@echo "🧹 Cleaning up docker containers..."
+	@echo "🧹 Cleaning Docker containers..."
 	@docker stop dronesphere-sitl 2>/dev/null || true
 	@docker rm dronesphere-sitl 2>/dev/null || true
 	@echo "✅ Docker containers cleaned"
 
 clean-all: clean docker-clean ## Clean everything (processes + containers)
+	@echo "✅ Full cleanup complete"
 
+# Port cleanup helper (internal use)
+clean-port-%:
+	@lsof -ti:$* | xargs -r kill -TERM 2>/dev/null || true
 # =============================================================================
 # DEVELOPMENT ENVIRONMENTS - Complete System Startup
 # =============================================================================
 
-dev: clean sitl ## Start basic development environment
-	@echo "🚀 Starting basic development environment..."
-	@echo "🚁 Starting SITL simulation..."
-	@sleep 45
-	@echo "🤖 Starting agent..."
+dev: ## Start core services (SITL + Agent + Server)
+	@echo "🚀 Starting development environment..."
+	@make clean
+	@make sitl &
+	@sleep 5
+	@echo "🤖 Starting Agent (port 8001)..."
 	@cd agent && nohup agent-env/bin/python3 main.py > /tmp/agent.log 2>&1 &
 	@sleep 3
-	@echo "🖥️  Starting server..."
+	@echo "🖥️  Starting Server (port 8002)..."
 	@cd server && nohup server-env/bin/python3 main.py > /tmp/server.log 2>&1 &
 	@sleep 2
-	@echo "✅ Basic development environment ready!"
+	@echo "✅ Development environment ready!"
 	@echo "📋 Logs: tail -f /tmp/agent.log /tmp/server.log"
+	@echo ""
+	@echo "🎯 Next steps:"
+	@echo "  • Test with MCP Inspector: make mcp-inspector"
+	@echo "  • Connect n8n: make mcp-n8n"
+	@echo "  • Setup Claude Desktop: make mcp-claude-setup"
 
-dev-llm: clean sitl ## Start complete LLM system (RECOMMENDED)
+dev-llm-bridge: clean sitl ## Start complete llm-bridge system (RECOMMENDED)
 	@echo "🚀 Starting complete LLM development environment..."
 	@echo "🚁 Starting SITL simulation..."
 	@sleep 30
@@ -298,7 +314,7 @@ dev-llm: clean sitl ## Start complete LLM system (RECOMMENDED)
 	@cd server && nohup server-env/bin/python3 main.py > /tmp/server.log 2>&1 &
 	@sleep 3
 	@echo "🧠 Starting LLM web interface..."
-	@cd mcp/web_bridge_demo && nohup ../mcp-env/bin/python web_bridge.py > /tmp/mcp.log 2>&1 &
+	@cd llm-bridge/web_bridge_demo && nohup ../llm-bridge/bin/python web_bridge.py > /tmp/llm-bridge.log 2>&1 &
 	@sleep 2
 	@echo "✅ Complete LLM system ready!"
 	@echo ""
@@ -308,38 +324,31 @@ dev-llm: clean sitl ## Start complete LLM system (RECOMMENDED)
 	@echo "📋 Logs available:"
 	@echo "  Agent:  tail -f /tmp/agent.log"
 	@echo "  Server: tail -f /tmp/server.log"
-	@echo "  MCP:    tail -f /tmp/mcp.log"
+	@echo "  llm-bridge:    tail -f /tmp/llm-bridge.log"
 	@echo ""
 	@echo "🎯 Ready for testing: make test-demo"
 
-dev-mcp: clean sitl ## Start system for pure MCP connections
-	@echo "🚀 Starting development environment for MCP connections..."
-	@sleep 5
-	@echo "🤖 Starting agent..."
-	@cd agent && nohup agent-env/bin/python3 main.py > /tmp/agent.log 2>&1 &
-	@sleep 3
-	@echo "🖥️  Starting server..."
-	@cd server && nohup server-env/bin/python3 main.py > /tmp/server.log 2>&1 &
-	@sleep 2
-	@echo "✅ System ready for MCP connections!"
-	@echo ""
-	@echo "🎯 Next steps:"
-	@echo "  For Claude Desktop: make claude-config"
-	@echo "  For Web Browser:    make mcp-web"
 
 # =============================================================================
 # STATUS COMMANDS - System Monitoring
 # =============================================================================
 
-status: ## Show basic system status
-	@echo "📊 DroneSphere Basic Status"
-	@echo "==========================="
-	@echo -n "SITL Container: "
-	@docker ps --filter "name=dronesphere-sitl" --format "{{.Status}}" 2>/dev/null | head -1 || echo "❌ Not running"
-	@echo -n "Agent (8001): "
-	@lsof -i:8001 >/dev/null 2>&1 && echo "✅ Running" || echo "❌ Stopped"
-	@echo -n "Server (8002): "
-	@lsof -i:8002 >/dev/null 2>&1 && echo "✅ Running" || echo "❌ Stopped"
+status: ## Check all services
+	@echo "📊 DroneSphere System Status"
+	@echo "============================"
+	@echo ""
+	@echo "Core Services:"
+	@lsof -i:8001 > /dev/null 2>&1 && echo "✅ Agent: Running (8001)" || echo "⭕ Agent: Stopped"
+	@lsof -i:8002 > /dev/null 2>&1 && echo "✅ Server: Running (8002)" || echo "⭕ Server: Stopped"
+	@echo ""
+	@echo "MCP Services:"
+	@lsof -i:8003 > /dev/null 2>&1 && echo "✅ MCP SSE: Running (8003)" || echo "⭕ MCP SSE: Stopped"
+	@lsof -i:5173 > /dev/null 2>&1 && echo "✅ Inspector: Running (5173)" || echo "⭕ Inspector: Stopped"
+	@echo ""
+	@echo "Ready for:"
+	@lsof -i:8003 > /dev/null 2>&1 && echo "  • n8n connection" || true
+	@lsof -i:8003 > /dev/null 2>&1 && echo "  • Claude Desktop (via mcp-remote)" || true
+
 
 status-full: ## Show complete system status including LLM
 	@echo "📊 DroneSphere Complete System Status"
@@ -352,7 +361,7 @@ status-full: ## Show complete system status including LLM
 	@lsof -i:8001 >/dev/null 2>&1 && echo "✅ Running" || echo "❌ Stopped"
 	@echo -n "  Server (8002):    "
 	@lsof -i:8002 >/dev/null 2>&1 && echo "✅ Running" || echo "❌ Stopped"
-	@echo -n "  MCP Web (3001):   "
+	@echo -n "  llm-bridge Web (3001):   "
 	@lsof -i:3001 >/dev/null 2>&1 && echo "✅ Running" || echo "❌ Stopped"
 	@echo ""
 	@echo "Health Checks:"
@@ -360,12 +369,12 @@ status-full: ## Show complete system status including LLM
 	@curl -s http://localhost:8001/health >/dev/null 2>&1 && echo "✅ Responding" || echo "❌ No response"
 	@echo -n "  Server API:       "
 	@curl -s http://localhost:8002/health >/dev/null 2>&1 && echo "✅ Responding" || echo "❌ No response"
-	@echo -n "  MCP Interface:    "
+	@echo -n "  llm-bridge Interface:    "
 	@curl -s http://localhost:3001/ >/dev/null 2>&1 && echo "✅ Responding" || echo "❌ No response"
 	@echo ""
 	@echo "LLM Integration:"
 	@echo -n "  API Key:          "
-	@cd mcp && mcp-env/bin/python -c "import os; from dotenv import load_dotenv; load_dotenv(); print('✅ Configured' if (os.getenv('OPENROUTER_API_KEY') or os.getenv('OPENAI_API_KEY')) else '❌ Missing')" 2>/dev/null || echo "❌ Error"
+	@cd llm-bridge-bridge && llm-bridge-env/bin/python -c "import os; from dotenv import load_dotenv; load_dotenv(); print('✅ Configured' if (os.getenv('OPENROUTER_API_KEY') or os.getenv('OPENAI_API_KEY')) else '❌ Missing')" 2>/dev/null || echo "❌ Error"
 
 # =============================================================================
 
@@ -811,21 +820,21 @@ test-navigation: ## Test complex navigation sequence
 		| python3 -m json.tool || echo "❌ Navigation sequence failed"
 
 # =============================================================================
-# MCP/LLM INTEGRATION TESTS - AI and Natural Language
+# llm-bridge/LLM INTEGRATION TESTS - AI and Natural Language
 # =============================================================================
 
-test-mcp-api: ## Test MCP API key configuration
+test-llm-bridge-api: ## Test MCP API key configuration
 	@echo "🔑 Testing MCP API Configuration..."
 	@echo "=================================="
-	@cd mcp && test -f mcp-env/bin/python && mcp-env/bin/python -c "from dotenv import load_dotenv; import os; load_dotenv(); print('✅ OpenRouter API Key:', 'SET' if os.getenv('OPENROUTER_API_KEY') else '❌ NOT SET'); print('✅ OpenAI API Key:', 'SET' if os.getenv('OPENAI_API_KEY') else '❌ NOT SET')" 2>/dev/null || echo "❌ MCP environment not ready - run 'make mcp-install'"
+	@cd llm-bridge && test -f llm-bridge-env/bin/python && llm-bridge-env/bin/python -c "from dotenv import load_dotenv; import os; load_dotenv(); print('✅ OpenRouter API Key:', 'SET' if os.getenv('OPENROUTER_API_KEY') else '❌ NOT SET'); print('✅ OpenAI API Key:', 'SET' if os.getenv('OPENAI_API_KEY') else '❌ NOT SET')" 2>/dev/null || echo "❌ MCP environment not ready - run 'make mcp-install'"
 
 test-llm: ## Test LLM integration and libraries
 	@echo "🧪 Testing LLM Integration..."
 	@echo "============================"
-	@cd mcp && mcp-env/bin/python -c "import os; from dotenv import load_dotenv; load_dotenv(); key = os.getenv('OPENROUTER_API_KEY') or os.getenv('OPENAI_API_KEY'); print('✅ API Key configured') if key else print('❌ No API key found'); print('✅ OpenAI library available') if __import__('openai') else print('❌ OpenAI library missing')" 2>/dev/null || echo "❌ LLM environment not ready"
+	@cd llm-bridge && llm-bridge-env/bin/python -c "import os; from dotenv import load_dotenv; load_dotenv(); key = os.getenv('OPENROUTER_API_KEY') or os.getenv('OPENAI_API_KEY'); print('✅ API Key configured') if key else print('❌ No API key found'); print('✅ OpenAI library available') if __import__('openai') else print('❌ OpenAI library missing')" 2>/dev/null || echo "❌ LLM environment not ready"
 
-test-mcp-web: ## Test MCP web interface integration
-	@echo "🧪 Testing MCP Web Integration..."
+test-llm-bridge-web: ## Test MCP web interface integration
+	@echo "🧪 Testing LLM Bridge Web Integration..."
 	@echo "================================"
 	@echo -n "Web interface accessible: "
 	@curl -s http://localhost:3001/ >/dev/null 2>&1 && echo "✅ YES" || echo "❌ NO"
@@ -864,40 +873,8 @@ test-demo: ## Test complete demo system readiness
 
 test-all: test-agent test-server test-fleet test-commands test-goto test-sequence test-navigation ## Run complete system test suite
 
-test-all-mcp: test-all test-mcp-api test-llm test-mcp-web ## Run all tests including MCP integration
+test-all-llm-bridge: test-all test-llm-bridge-api test-llm-bridge test-llm-bridge-web ## Run all tests including MCP integration
 
-# =============================================================================
-# CLAUDE DESKTOP SETUP - Future MCP Integration
-# =============================================================================
-
-claude-config: ## Generate Claude Desktop MCP configuration
-	@echo "🖥️  Generating Claude Desktop MCP configuration..."
-	@echo "Current directory: $(shell pwd)"
-	@mkdir -p mcp
-	@cat > mcp/claude_desktop_config.json << 'EOF'
-	{
-	"mcpServers": {
-		"dronesphere": {
-		"command": "python",
-		"args": ["$(shell pwd)/mcp/server.py"],
-		"cwd": "$(shell pwd)/mcp",
-		"env": {
-			"PYTHONPATH": "$(shell pwd)"
-		}
-		}
-	}
-	}
-	EOF
-	@echo "✅ Configuration generated: mcp/claude_desktop_config.json"
-	@echo ""
-	@echo "📝 Setup Instructions:"
-	@echo "1. Copy content to Claude Desktop config file:"
-	@echo "   macOS: ~/Library/Application Support/Claude/claude_desktop_config.json"
-	@echo "   Windows: %APPDATA%\\Claude\\claude_desktop_config.json"
-	@echo "   Linux: ~/.config/Claude/claude_desktop_config.json"
-	@echo ""
-	@echo "2. Restart Claude Desktop"
-	@echo "3. Try: 'Take off drone 1 to 15 meters'"
 
 # =============================================================================
 # DEVELOPMENT UTILITIES - Debugging and Monitoring
@@ -907,7 +884,7 @@ show-logs: ## Show live logs from all services
 	@echo "📋 Live Logs from All Services"
 	@echo "=============================="
 	@echo "Press Ctrl+C to stop"
-	@tail -f /tmp/agent.log /tmp/server.log /tmp/mcp.log 2>/dev/null || echo "No log files found - services may not be running"
+	@tail -f /tmp/agent.log /tmp/server.log /tmp/llm-bridge.log 2>/dev/null || echo "No log files found - services may not be running"
 
 show-processes: ## Show all DroneSphere-related processes
 	@echo "🔍 DroneSphere Process Information"
@@ -932,95 +909,119 @@ test-schemas-api: ## Test YAML schemas API endpoints
 	@echo "📋 Testing schemas API endpoints..."
 	@curl -s http://localhost:8002/api/schemas | jq '.metadata'
 	@curl -s http://localhost:8002/api/schemas/takeoff | jq '.schema_name'
-	@curl -s http://localhost:8002/api/schemas/mcp/tools | jq '.metadata.total_schemas'
+	@curl -s http://localhost:8002/api/schemas/mcllm-bridgep/tools | jq '.metadata.total_schemas'
 
-# Replace the MCP section with this final version:
+
 
 # =============================================================================
-# MCP SERVER COMMANDS
+# MCP SERVER COMMANDS - CLEAN AND ORGANIZED
 # =============================================================================
 
-mcp-setup: ## Setup MCP server environment
-	@echo "🚀 Setting up MCP server..."
-	cd mcp-server && source mcp-server-env/bin/activate && \
+mcp-setup: ## Install MCP dependencies
+	@echo "📦 Installing MCP server dependencies..."
+	@cd mcp-server && source mcp-server-env/bin/activate && \
 		uv pip install -r requirements.txt
 	@echo "✅ MCP setup complete"
 
-mcp-dev: ## Run MCP server with inspector for testing
-	@echo "🔍 Starting MCP Inspector..."
-	@echo "Opening browser at http://localhost:5173"
-	cd mcp-server && source mcp-server-env/bin/activate && \
-		DEBUG_MODE=true python -m mcp dev server.py
+mcp-inspector: ## Test with MCP Inspector (development)
+	@echo "🔍 Starting MCP Inspector for testing..."
+	@make clean-port-5173
+	@make clean-port-8003
+	@echo "📱 Browser will open at http://localhost:5173"
+	@echo "⏹️  Press Ctrl+C to stop"
+	@cd mcp-server && source mcp-server-env/bin/activate && \
+		DEBUG_MODE=true mcp dev server.py
 
-mcp-stdio: ## Run MCP server in STDIO mode (Claude Desktop)
-	@echo "💻 Starting MCP server for Claude Desktop..."
-	cd mcp-server && source mcp-server-env/bin/activate && \
-		python server.py stdio
-
-mcp-http: ## Run MCP server in HTTP mode (n8n)
-	@echo "🌐 Starting MCP HTTP server on port 8003..."
-	cd mcp-server && source mcp-server-env/bin/activate && \
-		python server.py
-
-mcp-test: ## Quick test of MCP server setup
-	@echo "🧪 Testing MCP setup..."
-	cd mcp-server && source mcp-server-env/bin/activate && \
-		python -c "import server; print('✅ MCP imports OK')"
-
-# Complete development environment with MCP
-dev-full-mcp: ## Start SITL + Agent + Server + MCP
-	@echo "🚁 Starting Complete DroneSphere System with MCP..."
-	@echo "Step 1: Starting SITL simulator..."
-	@make sitl &
-	@sleep 5
-	@echo "Step 2: Starting Agent (port 8001)..."
-	@make agent &
-	@sleep 2
-	@echo "Step 3: Starting Server (port 8002)..."
-	@make server &
-	@sleep 2
-	@echo "Step 4: Starting MCP Server (port 8003)..."
-	@make mcp-http &
-	@sleep 2
+mcp-n8n: ## Start MCP SSE server for n8n (port 8003)
+	@echo "🌐 Starting MCP SSE Server for n8n..."
+	@make clean-port-8003
 	@echo ""
-	@echo "✅ All systems running:"
-	@echo "  - SITL Simulator"
-	@echo "  - Agent: http://localhost:8001"
-	@echo "  - Server: http://localhost:8002"
-	@echo "  - MCP: http://localhost:8003"
+	@echo "📋 n8n Configuration:"
+	@echo "  1. In n8n, add 'MCP Client Tool' node"
+	@echo "  2. Server URL: http://172.17.0.1:8003/sse"
+	@echo "  3. Tools will auto-discover"
 	@echo ""
-	@echo "📝 Test with: make mcp-dev (in new terminal)"
+	@echo "⏹️  Press Ctrl+C to stop"
+	@cd mcp-server && source mcp-server-env/bin/activate && \
+		python server.py sse
 
-# Install all dependencies including MCP
-install-deps-all: install-deps ## Install all dependencies including MCP
-	@echo "📦 Installing MCP dependencies..."
-	cd mcp-server && source mcp-server-env/bin/activate && \
-		uv pip install -r requirements.txt
-
-# Quick status check for all services
-status-mcp: ## Check status of all services including MCP
-	@echo "📊 System Status:"
-	@curl -s http://localhost:8001/health > /dev/null 2>&1 && \
-		echo "✅ Agent: Running" || echo "❌ Agent: Not running"
-	@curl -s http://localhost:8002/health > /dev/null 2>&1 && \
-		echo "✅ Server: Running" || echo "❌ Server: Not running"
-	@curl -s http://localhost:8003/health > /dev/null 2>&1 && \
-		echo "✅ MCP: Running" || echo "❌ MCP: Not running"
-
-# Claude Desktop configuration helper
-mcp-claude-config: ## Generate Claude Desktop configuration
-	@echo "📋 Add this to Claude Desktop config:"
-	@echo "Location: ~/Library/Application Support/Claude/claude_desktop_config.json"
+mcp-claude: ## Show Claude Desktop setup instructions
+	@echo "💻 Claude Desktop Setup Instructions"
+	@echo "===================================="
 	@echo ""
+	@echo "Your MCP server is on: 62.60.206.251:8003"
+	@echo ""
+	@echo "OPTION 1: Using mcp-remote (Easiest)"
+	@echo "------------------------------------"
+	@echo "1. On CLIENT machine, ensure Node.js is installed"
+	@echo ""
+	@echo "2. In Claude Desktop:"
+	@echo "   • Click Claude menu in MENU BAR (not in app window!)"
+	@echo "   • Go to Settings → Developer → Edit Config"
+	@echo ""
+	@echo "3. Add this configuration:"
 	@echo '{'
 	@echo '  "mcpServers": {'
 	@echo '    "dronesphere": {'
-	@echo '      "command": "python",'
-	@echo '      "args": ["'$$(pwd)'/mcp-server/server.py", "stdio"],'
-	@echo '      "env": {'
-	@echo '        "OPENROUTER_API_KEY": "YOUR_KEY",'
-	@echo '        "DRONESPHERE_SERVER_URL": "http://localhost:8002"'
-	@echo '      }'
+	@echo '      "command": "npx",'
+	@echo '      "args": ["-y", "mcp-remote", "http://62.60.206.251:8003/sse"]'
 	@echo '    }'
 	@echo '  }'
 	@echo '}'
+	@echo ""
+	@echo "4. Save and restart Claude Desktop (Cmd+R or Ctrl+R)"
+	@echo "5. Look for 🔨 tool icon in bottom-right of chat input"
+	@echo ""
+	@echo "OPTION 2: Using SSH (More secure)"
+	@echo "---------------------------------"
+	@echo "1. Create script on CLIENT machine:"
+	@echo ""
+	@echo "   Windows (dronesphere-mcp.bat):"
+	@echo '   @echo off'
+	@echo '   ssh root@62.60.206.251 "cd /root/dronesphere/mcp-server && source mcp-server-env/bin/activate && python server.py stdio"'
+	@echo ""
+	@echo "   Mac/Linux (dronesphere-mcp.sh):"
+	@echo '   #!/bin/bash'
+	@echo '   ssh root@62.60.206.251 "cd /root/dronesphere/mcp-server && source mcp-server-env/bin/activate && python server.py stdio"'
+	@echo ""
+	@echo "2. Configure Claude Desktop with path to your script"
+	@echo ""
+	@echo "📍 Config file locations:"
+	@echo "   macOS: ~/Library/Application Support/Claude/claude_desktop_config.json"
+	@echo "   Windows: %APPDATA%\\Claude\\claude_desktop_config.json"
+
+mcp-test-stdio: ## Test STDIO mode locally
+	@echo "💻 Testing STDIO mode..."
+	@cd mcp-server && source mcp-server-env/bin/activate && \
+		echo '{"jsonrpc":"2.0","method":"initialize","params":{},"id":1}' | \
+		python server.py stdio 2>/dev/null | head -1 | \
+		(grep -q "result" && echo "✅ STDIO mode working" || echo "❌ STDIO mode failed")
+
+mcp-test-sse: ## Test SSE endpoint
+	@echo "🧪 Testing SSE endpoint..."
+	@curl -N -H "Accept: text/event-stream" http://localhost:8003/sse 2>/dev/null | head -2 | \
+		(grep -q "event:" && echo "✅ SSE working" || echo "❌ SSE not responding")
+
+# Port cleanup helpers
+clean-port-%:
+	@lsof -ti:$* | xargs -r kill -TERM 2>/dev/null || true
+
+
+
+# =============================================================================
+# TESTING HELPERS
+# =============================================================================
+
+test-n8n: ## Test n8n connectivity
+	@echo "🧪 Testing n8n SSE endpoint..."
+	@curl -N -H "Accept: text/event-stream" http://localhost:8003/sse 2>/dev/null | head -2 | \
+		(grep -q "event:" && echo "✅ SSE endpoint working" || echo "❌ SSE endpoint not responding")
+	@echo ""
+	@echo "📝 If working, configure n8n MCP Client Tool with:"
+	@echo "   URL: http://172.17.0.1:8003/sse"
+
+test-all: ## Test all MCP modes
+	@echo "🧪 Testing all MCP modes..."
+	@make mcp-test-stdio
+	@make test-n8n
+	@echo "✅ Tests complete"
