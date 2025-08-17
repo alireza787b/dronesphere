@@ -1,7 +1,14 @@
-# MCP Server Requirements
+# MCP Server Dependencies
 mcp[cli]>=1.2.0
-httpx>=0.24.0
-openai>=1.0.0
 python-dotenv>=1.0.0
 pyyaml>=6.0
-asyncio  # Built-in, no version needed
+httpx>=0.25.0
+openai>=1.0.0
+uvicorn>=0.24.0
+
+# Coordinate transformations
+pymap3d>=3.0.0
+numpy>=1.24.0
+
+# Optional for development
+fastapi>=0.104.0

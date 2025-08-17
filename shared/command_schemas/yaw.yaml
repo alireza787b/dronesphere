@@ -1,0 +1,18 @@
+name: yaw
+description: "Rotate (yaw) drone to specified heading maintaining current position"
+category: navigation
+validation_schema:
+  type: object
+  properties:
+    heading:
+      type: number
+      minimum: 0.0
+      maximum: 360.0
+      description: "Target heading in degrees (0=North)"
+    speed:
+      type: number
+      minimum: 1.0
+      maximum: 90.0
+      default: 30.0
+      description: "Rotation speed in degrees/second"
+  required: ["heading"]
