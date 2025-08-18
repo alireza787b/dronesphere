@@ -10,7 +10,7 @@ class DroneBackend(ABC):
     """Abstract interface for drone communication backends."""
 
     @abstractmethod
-    async def connect(self, connection_string: str = "udp://172.17.0.1:14540") -> None:
+    async def connect(self, connection_string: str = "udp://:14540") -> None:
         """Connect to the drone."""
         pass
 

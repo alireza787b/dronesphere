@@ -52,7 +52,7 @@ class MAVSDKBackend:
         6: "RTK_FIXED",
     }
 
-    def __init__(self, connection_string: str = "udp://172.17.0.1:14540"):
+    def __init__(self, connection_string: str = "udp://:14540"):
         """Initialize MAVSDK backend.
 
         Args:
