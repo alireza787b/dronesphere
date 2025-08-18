@@ -1,12 +1,18 @@
-"""MAVSDK drone backend implementation.
+"""MAVSDK drone backend implementation - FIXED VERSION.
 
 Path: agent/backends/mavsdk.py
 Provides telemetry and control via MAVSDK with enhanced GPS data.
 
-Robust implementation that handles MAVSDK version differences and missing attributes.
+FIXES:
+- Updated connection string format (udpin:// instead of udp://)
+- Docker bridge network detection and configuration
+- Robust port binding with fallback options
+- Environment-aware connection setup
 """
 import asyncio
 import logging
+import os
+import subprocess
 import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, Set
@@ -52,14 +58,14 @@ class MAVSDKBackend:
         6: "RTK_FIXED",
     }
 
-    def __init__(self, connection_string: str = "udp://:14540"):
-        """Initialize MAVSDK backend.
+    def __init__(self, connection_string: Optional[str] = None):
+        """Initialize MAVSDK backend with smart connection detection.
 
         Args:
-            connection_string: MAVSDK connection string
+            connection_string: Override connection string (optional)
         """
         self.drone = System()
-        self._connection_string = connection_string
+        self._connection_string = connection_string or self._detect_connection_string()
         self.connected = False
 
         # Task management
@@ -71,8 +77,91 @@ class MAVSDKBackend:
         self._px4_origin: Optional[Dict[str, float]] = None
         self._origin_set = False
 
+        logger.info(f"🔧 MAVSDK Backend initialized with connection: {self._connection_string}")
+
+    def _detect_connection_string(self) -> str:
+        """Detect the appropriate connection string based on environment."""
+        # Check for environment variable override
+        if env_conn := os.getenv("MAVSDK_CONNECTION_STRING"):
+            logger.info(f"📡 Using env MAVSDK_CONNECTION_STRING: {env_conn}")
+            return env_conn
+
+        # Check if we're in Docker or if SITL container is running
+        docker_bridge_ip = self._get_docker_bridge_ip()
+        if docker_bridge_ip:
+            conn_str = f"udpin://{docker_bridge_ip}:14540"
+            logger.info(f"🐳 Detected Docker environment, using: {conn_str}")
+            return conn_str
+
+        # Check if SITL container is running and get its IP
+        sitl_ip = self._get_sitl_container_ip()
+        if sitl_ip:
+            conn_str = f"udpin://{sitl_ip}:14540"
+            logger.info(f"🚁 Detected SITL container at: {conn_str}")
+            return conn_str
+
+        # Default to localhost with new format
+        logger.info("🏠 Using localhost connection")
+        return "udpin://127.0.0.1:14540"
+
+    def _get_docker_bridge_ip(self) -> Optional[str]:
+        """Get Docker bridge network IP if available."""
+        try:
+            result = subprocess.run(
+                ["docker", "network", "inspect", "bridge"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode == 0:
+                import json
+
+                network_info = json.loads(result.stdout)
+                if network_info and len(network_info) > 0:
+                    gateway = network_info[0].get("IPAM", {}).get("Config", [{}])[0].get("Gateway")
+                    if gateway:
+                        logger.debug(f"Found Docker bridge gateway: {gateway}")
+                        return gateway
+        except Exception as e:
+            logger.debug(f"Could not detect Docker bridge IP: {e}")
+        return None
+
+    def _get_sitl_container_ip(self) -> Optional[str]:
+        """Get SITL container IP if running."""
+        try:
+            result = subprocess.run(
+                [
+                    "docker",
+                    "inspect",
+                    "-f",
+                    "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}",
+                    "dronesphere-sitl",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                ip = result.stdout.strip()
+                logger.debug(f"Found SITL container IP: {ip}")
+                return ip
+        except Exception as e:
+            logger.debug(f"Could not get SITL container IP: {e}")
+        return None
+
+    def _check_port_availability(self, port: int) -> bool:
+        """Check if a port is available for binding."""
+        import socket
+
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                sock.bind(('', port))
+                return True
+        except OSError:
+            return False
+
     async def connect(self, connection_string: Optional[str] = None) -> bool:
-        """Connect to drone via MAVSDK.
+        """Connect to drone via MAVSDK with intelligent fallback.
 
         Args:
             connection_string: Override connection string (optional)
@@ -82,40 +171,60 @@ class MAVSDKBackend:
         """
         conn_str = connection_string or self._connection_string
 
-        try:
-            logger.info(f"Connecting to drone at {conn_str}")
-            start_time = time.time()
+        # Try multiple connection strategies
+        connection_attempts = [
+            conn_str,  # Primary connection string
+            "udpin://127.0.0.1:14540",  # Localhost fallback
+            "udpout://127.0.0.1:14550",  # Output port fallback
+        ]
 
-            # Connect with timeout
+        # Add Docker bridge IP if available
+        docker_ip = self._get_docker_bridge_ip()
+        if docker_ip and f"udpin://{docker_ip}:14540" not in connection_attempts:
+            connection_attempts.insert(-2, f"udpin://{docker_ip}:14540")
+
+        for attempt, conn in enumerate(connection_attempts, 1):
+            logger.info(f"🔄 Attempt {attempt}/{len(connection_attempts)}: Connecting to {conn}")
+
             try:
-                await asyncio.wait_for(self.drone.connect(system_address=conn_str), timeout=5.0)
-            except asyncio.TimeoutError:
-                logger.error("❌ MAVSDK connect() timed out")
-                return False
+                start_time = time.time()
 
-            # Wait for connection state with proper timeout
-            if await self._wait_for_connection(start_time):
-                await self._start_telemetry_collection()
-                self.connected = True
+                # Connect with timeout
+                try:
+                    await asyncio.wait_for(self.drone.connect(system_address=conn), timeout=8.0)
+                except asyncio.TimeoutError:
+                    logger.warning(f"⏱️  Connection {attempt} timed out after 8s")
+                    continue
 
-                elapsed = time.time() - start_time
-                logger.info(f"✅ Connected to drone in {elapsed:.1f}s")
-                return True
-            else:
-                logger.error(f"❌ Connection timeout after {self.DEFAULT_CONNECTION_TIMEOUT}s")
-                return False
+                # Wait for connection state with proper timeout
+                if await self._wait_for_connection(start_time):
+                    await self._start_telemetry_collection()
+                    self.connected = True
+                    self._connection_string = conn  # Update successful connection string
 
-        except Exception as e:
-            logger.error(f"❌ Connection failed: {e}")
-            self.connected = False
-            return False
+                    elapsed = time.time() - start_time
+                    logger.info(f"✅ Connected to drone at {conn} in {elapsed:.1f}s")
+                    return True
+                else:
+                    logger.warning(f"⏱️  Connection {attempt} failed to establish")
+                    continue
+
+            except Exception as e:
+                logger.warning(f"❌ Connection attempt {attempt} failed: {e}")
+                continue
+
+        logger.error("❌ All connection attempts failed")
+        self.connected = False
+        return False
 
     async def _wait_for_connection(self, start_time: float) -> bool:
         """Wait for drone connection with proper timeout handling."""
-        while time.time() - start_time < self.DEFAULT_CONNECTION_TIMEOUT:
+        timeout = min(15.0, self.DEFAULT_CONNECTION_TIMEOUT)  # Reduced timeout
+
+        while time.time() - start_time < timeout:
             try:
                 # Use timeout for each connection state check
-                async with asyncio.timeout(2.0):
+                async with asyncio.timeout(3.0):
                     async for state in self.drone.core.connection_state():
                         if state.is_connected:
                             return True
@@ -134,135 +243,78 @@ class MAVSDKBackend:
 
     async def _start_telemetry_collection(self) -> None:
         """Start all telemetry collection tasks with proper error handling."""
-        collectors = [
-            ("position", self._collect_position),
-            ("attitude", self._collect_attitude),
-            ("battery", self._collect_battery),
-            ("flight_mode", self._collect_flight_mode),
-            ("gps_info", self._collect_gps_info),
-            ("armed_state", self._collect_armed_state),
+        tasks = [
+            self._collect_position(),
+            self._collect_attitude(),
+            self._collect_battery(),
+            self._collect_flight_mode(),
+            self._collect_gps_info(),
+            self._collect_armed_state(),
         ]
 
-        for name, collector in collectors:
-            try:
-                task = asyncio.create_task(
-                    self._safe_collect(name, collector), name=f"telemetry_{name}"
-                )
-                self._telemetry_tasks.add(task)
-                # Remove completed tasks automatically
-                task.add_done_callback(self._telemetry_tasks.discard)
+        for coro in tasks:
+            task = asyncio.create_task(coro)
+            self._telemetry_tasks.add(task)
+            # Remove completed tasks
+            task.add_done_callback(self._telemetry_tasks.discard)
 
-            except Exception as e:
-                logger.error(f"Failed to start {name} collector: {e}")
-
-    async def _safe_collect(self, name: str, collector_func) -> None:
-        """Safely run telemetry collector with error handling and restart logic."""
-        retry_count = 0
-        max_retries = 3
-
-        while not self._shutdown_event.is_set() and retry_count < max_retries:
-            try:
-                await collector_func()
-                # If we get here, the collector ended normally
-                break
-
-            except asyncio.CancelledError:
-                logger.debug(f"Telemetry collector {name} cancelled")
-                break
-
-            except Exception as e:
-                retry_count += 1
-                logger.error(f"Telemetry collector {name} failed (attempt {retry_count}): {e}")
-
-                if retry_count < max_retries:
-                    # Exponential backoff for retries
-                    await asyncio.sleep(min(2**retry_count, 10))
-                else:
-                    logger.error(
-                        f"Telemetry collector {name} failed permanently after {max_retries} attempts"
-                    )
+        logger.info(f"📊 Started {len(tasks)} telemetry collection tasks")
 
     async def _collect_position(self) -> None:
-        """Collect position telemetry with robust error handling."""
+        """Collect position data with error handling and PX4 origin tracking."""
         async for position in self.drone.telemetry.position():
             try:
-                self._telemetry_state.position = {
-                    "latitude": getattr(position, 'latitude_deg', 0.0),
-                    "longitude": getattr(position, 'longitude_deg', 0.0),
-                    "altitude": getattr(position, 'absolute_altitude_m', 0.0),
-                    "relative_altitude": getattr(position, 'relative_altitude_m', 0.0),
+                position_data = {
+                    "latitude": float(position.latitude_deg),
+                    "longitude": float(position.longitude_deg),
+                    "altitude": float(position.absolute_altitude_m),
+                    "relative_altitude": float(position.relative_altitude_m),
                 }
 
-                # Set PX4 origin on first valid GPS fix
-                await self._maybe_set_origin(position)
+                # Track PX4 origin (first valid GPS position)
+                if (
+                    not self._origin_set
+                    and position_data["latitude"] != 0
+                    and position_data["longitude"] != 0
+                ):
+                    self._px4_origin = {
+                        "latitude": position_data["latitude"],
+                        "longitude": position_data["longitude"],
+                        "altitude": position_data["altitude"],
+                    }
+                    self._origin_set = True
+                    logger.info(f"📍 PX4 origin set: {self._px4_origin}")
+
+                self._telemetry_state.position = position_data
 
             except Exception as e:
                 logger.error(f"Error processing position data: {e}")
 
-    async def _maybe_set_origin(self, position) -> None:
-        """Set PX4 origin on first valid GPS position with validation."""
-        try:
-            lat = getattr(position, 'latitude_deg', 0.0)
-            lon = getattr(position, 'longitude_deg', 0.0)
-            alt = getattr(position, 'absolute_altitude_m', 0.0)
-
-            if (
-                not self._origin_set
-                and lat != 0.0
-                and lon != 0.0
-                and -90 <= lat <= 90
-                and -180 <= lon <= 180
-            ):
-                self._px4_origin = {
-                    "latitude": lat,
-                    "longitude": lon,
-                    "altitude": alt,
-                }
-                self._origin_set = True
-                logger.info(f"PX4 origin set: {self._px4_origin}")
-
-        except Exception as e:
-            logger.error(f"Error setting PX4 origin: {e}")
-
     async def _collect_attitude(self) -> None:
-        """Collect attitude telemetry with safe attribute access."""
+        """Collect attitude data with error handling."""
         async for attitude in self.drone.telemetry.attitude_euler():
             try:
                 self._telemetry_state.attitude = {
-                    "roll": getattr(attitude, 'roll_deg', 0.0),
-                    "pitch": getattr(attitude, 'pitch_deg', 0.0),
-                    "yaw": getattr(attitude, 'yaw_deg', 0.0),
+                    "roll": float(attitude.roll_deg),
+                    "pitch": float(attitude.pitch_deg),
+                    "yaw": float(attitude.yaw_deg),
                 }
             except Exception as e:
                 logger.error(f"Error processing attitude data: {e}")
 
     async def _collect_battery(self) -> None:
-        """Collect battery telemetry with version-safe attribute access."""
+        """Collect battery data with error handling."""
         async for battery in self.drone.telemetry.battery():
             try:
-                # Use safe attribute access for version compatibility
-                battery_data = {
-                    "voltage": getattr(battery, 'voltage_v', 0.0),
-                    "remaining_percent": getattr(battery, 'remaining_percent', 0.0) * 100,
+                self._telemetry_state.battery = {
+                    "voltage": float(battery.voltage_v),
+                    "remaining": float(battery.remaining_percent),
                 }
-
-                # Optional attributes that may not exist in all MAVSDK versions
-                if hasattr(battery, 'current_battery_a'):
-                    battery_data["current"] = battery.current_battery_a
-
-                # Try different capacity attribute names
-                for capacity_attr in ['capacity_consumed_ah', 'consumed_ah', 'capacity_ah']:
-                    if hasattr(battery, capacity_attr):
-                        battery_data["capacity_consumed"] = getattr(battery, capacity_attr)
-                        break
-
-                self._telemetry_state.battery = battery_data
-
             except Exception as e:
                 logger.error(f"Error processing battery data: {e}")
 
     async def _collect_flight_mode(self) -> None:
-        """Collect flight mode telemetry with safe string conversion."""
+        """Collect flight mode data with error handling."""
         async for flight_mode in self.drone.telemetry.flight_mode():
             try:
                 self._telemetry_state.flight_mode = str(flight_mode)
