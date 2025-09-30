@@ -791,6 +791,42 @@ test-goto-ned: ## Test NED coordinate navigation (relative positioning)
 test-goto: test-goto-gps test-goto-ned ## Test both GPS and NED navigation systems
 
 # =============================================================================
+# SMART NAVIGATION TESTS - New Enhanced Navigation System
+# =============================================================================
+
+test-smart-nav-body: ## Test body frame navigation (forward/right/up)
+	@echo "🧭 Testing body frame navigation..."
+	@echo "Note: Requires drone to be airborne and MCP server running"
+	@curl -s http://localhost:8003/health >/dev/null 2>&1 || { echo "❌ MCP server not running. Start with: make mcp-n8n"; exit 1; }
+	@echo "Test 1: Forward 10m"
+	@echo "Test 2: Right 5m"
+	@echo "Test 3: Up 3m"
+	@echo "⚠️  Manual test required - use MCP Inspector or n8n"
+
+test-smart-nav-offset: ## Test offset navigation (north/east from current/home)
+	@echo "🧭 Testing offset navigation..."
+	@echo "Test 1: 10m north from current"
+	@echo "Test 2: 5m east from current"
+	@echo "Test 3: 20m north from home"
+	@echo "⚠️  Manual test required - use MCP Inspector or n8n"
+
+test-navigation-enhanced: ## Test complete navigation system including smart_navigate
+	@echo "🧪 Enhanced Navigation System Test Suite"
+	@echo "========================================"
+	@echo ""
+	@echo "1. Traditional GPS/NED navigation"
+	@make test-goto
+	@echo ""
+	@echo "2. Smart Navigation (Body Frame)"
+	@make test-smart-nav-body
+	@echo ""
+	@echo "3. Smart Navigation (Offset)"
+	@make test-smart-nav-offset
+	@echo ""
+	@echo "✅ Navigation test suite information displayed"
+	@echo "📋 For actual testing, use MCP Inspector or n8n with smart_navigate tool"
+
+# =============================================================================
 # ROBUSTNESS TESTS - Safety and Error Handling
 # =============================================================================
 

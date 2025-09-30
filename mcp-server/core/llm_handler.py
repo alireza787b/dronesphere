@@ -86,17 +86,33 @@ CURRENT DRONE STATE:
 AVAILABLE COMMANDS:
 1. takeoff: {{"name": "takeoff", "params": {{"altitude": 1-120}}}}
 2. land: {{"name": "land", "params": {{}}}}
-3. goto (NED): {{"name": "goto", "params": {{"north": m, "east": m, "down": m}}}}
-4. goto (GPS): {{"name": "goto", "params": {{"latitude": deg, "longitude": deg, "altitude": m}}}}
-5. wait: {{"name": "wait", "params": {{"duration": seconds}}}}
-6. rtl: {{"name": "rtl", "params": {{}}}}
+3. rtl: {{"name": "rtl", "params": {{}}}}
+4. wait: {{"name": "wait", "params": {{"duration": seconds}}}}
+
+5. goto - SMART NAVIGATION (handles all coordinate types):
+   a) GPS: {{"name": "goto", "params": {{"latitude": deg, "longitude": deg, "altitude": m}}}}
+   b) NED from origin: {{"name": "goto", "params": {{"north": m, "east": m, "down": m}}}}
+   c) Body frame: {{"name": "goto", "params": {{"forward": m, "right": m, "up_body": m}}}}
+   d) Offset from current: {{"name": "goto", "params": {{"offset_north": m, "offset_east": m, "offset_up": m, "reference": "current"}}}}
+   e) Offset from home: {{"name": "goto", "params": {{"offset_north": m, "offset_east": m, "offset_up": m, "reference": "home"}}}}
+
+NAVIGATION RULES:
+- "fly forward X": Use body frame: {{"forward": X, "maintain_altitude": true}}
+- "go north X": Use offset: {{"offset_north": X, "reference": "current", "maintain_altitude": true}}
+- "go X meters north from home": Use offset: {{"offset_north": X, "reference": "home"}}
+- "move right X": Use body frame: {{"right": X, "maintain_altitude": true}}
+- "go up X": Use offset: {{"offset_up": X, "reference": "current"}}
+- "return home" / "go home" / "return to launch": Use rtl command (PX4 native)
+- "go back to home" / "fly home": Use rtl command (NOT goto home position)
+- NED down is NEGATIVE for altitude (e.g., down=-20 means 20m high)
+- offset_up is POSITIVE for altitude (e.g., offset_up=20 means 20m up)
+- Always add "maintain_altitude": true for horizontal-only movements
 
 CRITICAL RULES:
-- NED: down is NEGATIVE for altitude (e.g., -20 = 20m high)
-- When user doesn't specify altitude in movement, use current altitude
 - Detect sequences: "then", "after", "next" = multiple commands
 - Understand ANY language, respond in user's language
 - Return ONLY valid JSON array of commands
+- For movement, prefer goto with appropriate coordinate type
 
 {safety_rules}
 
@@ -180,8 +196,18 @@ OUTPUT: Return ONLY the JSON array, no explanation."""
             elif 'land' in part or 'فرود' in part:
                 commands.append({"name": "land", "params": {}})
 
-            # RTL command
-            elif 'rtl' in part or 'return' in part or 'home' in part:
+            # RTL command (return home - use PX4 native RTL)
+            elif any(
+                word in part
+                for word in [
+                    'rtl',
+                    'return home',
+                    'go home',
+                    'fly home',
+                    'return to launch',
+                    'go back home',
+                ]
+            ):
                 commands.append({"name": "rtl", "params": {}})
 
             # Wait command
@@ -190,34 +216,76 @@ OUTPUT: Return ONLY the JSON array, no explanation."""
                 duration = int(match.group(1)) if match else 5
                 commands.append({"name": "wait", "params": {"duration": min(duration, 300)}})
 
-            # Goto command (simple NED)
-            elif any(dir in part for dir in ['north', 'south', 'east', 'west', 'up', 'down']):
-                north = east = down = 0
+            # Forward/backward/right/left (Body frame)
+            elif any(word in part for word in ['forward', 'backward', 'right', 'left']):
+                forward = right = up_val = 0
+
+                # Extract distance
+                match = re.search(r'(\d+)', part)
+                distance = int(match.group(1)) if match else 5
+
+                if 'forward' in part:
+                    forward = distance
+                elif 'backward' in part or 'back' in part:
+                    forward = -distance
+
+                if 'right' in part:
+                    right = distance
+                elif 'left' in part:
+                    right = -distance
+
+                commands.append(
+                    {
+                        "name": "goto",
+                        "params": {"forward": forward, "right": right, "maintain_altitude": True},
+                    }
+                )
+
+            # North/south/east/west (Offset from current)
+            elif any(dir in part for dir in ['north', 'south', 'east', 'west']):
+                offset_north = offset_east = offset_up = 0
 
                 # Extract distance
                 match = re.search(r'(\d+)', part)
                 distance = int(match.group(1)) if match else 5
 
                 if 'north' in part:
-                    north = distance
+                    offset_north = distance
                 elif 'south' in part:
-                    north = -distance
+                    offset_north = -distance
 
                 if 'east' in part:
-                    east = distance
+                    offset_east = distance
                 elif 'west' in part:
-                    east = -distance
+                    offset_east = -distance
 
-                if 'up' in part:
-                    down = -distance  # Up means negative down
-                elif 'down' in part:
-                    down = distance
-                else:
-                    # Maintain current altitude if not specified
-                    down = -current_alt
+                # Check for "from home" or default to "current"
+                reference = "home" if "home" in part or "origin" in part else "current"
 
                 commands.append(
-                    {"name": "goto", "params": {"north": north, "east": east, "down": down}}
+                    {
+                        "name": "goto",
+                        "params": {
+                            "offset_north": offset_north,
+                            "offset_east": offset_east,
+                            "reference": reference,
+                            "maintain_altitude": True,
+                        },
+                    }
+                )
+
+            # Up/down (Offset from current altitude)
+            elif 'up' in part or 'down' in part:
+                match = re.search(r'(\d+)', part)
+                distance = int(match.group(1)) if match else 5
+
+                if 'up' in part:
+                    offset_up = distance
+                else:  # down
+                    offset_up = -distance
+
+                commands.append(
+                    {"name": "goto", "params": {"offset_up": offset_up, "reference": "current"}}
                 )
 
         # If no commands parsed, try emergency keywords

@@ -6,6 +6,7 @@ Groups:
 1. Command Execution Tools
 2. Status & Telemetry Tools
 3. Coordinate Transformation Tools
+4. Enhanced Navigation (smart_navigate)
 """
 
 import asyncio
@@ -16,6 +17,9 @@ from typing import Any, Dict, Optional, Tuple
 import numpy as np
 import pymap3d as pm
 from mcp.server.fastmcp import Context
+
+# Import enhanced navigation
+from tools_navigation_enhanced import register_enhanced_navigation_tool
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +36,10 @@ def register_all_tools(mcp, app_context_getter):
     _register_status_tools(mcp, app_context_getter)
     _register_coordinate_tools(mcp, app_context_getter)
 
-    logger.info("All tools registered successfully")
+    # Register enhanced navigation tool
+    register_enhanced_navigation_tool(mcp, app_context_getter)
+
+    logger.info("All tools registered successfully (including smart_navigate)")
 
 
 # ============================================================================

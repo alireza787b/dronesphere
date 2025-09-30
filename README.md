@@ -12,6 +12,11 @@
 - **🤖 Model Context Protocol (MCP)**: Production-ready standardized AI integration
 - **🌐 n8n Workflow Automation**: AI agents for autonomous drone operations
 - **💬 Natural Language Control**: Multi-language support (English, Persian, Spanish, French, German)
+- **🧭 Smart Navigation NEW!**: Unified navigation tool with automatic coordinate transformation
+  - Body frame: "fly forward 10m"
+  - Offset navigation: "go 5m north from current position"
+  - Reference frames: current, home, GPS absolute
+  - 4 coordinate systems in ONE tool call
 - **🎯 Dual Coordinate Systems**: GPS absolute positioning + NED relative navigation
 - **🛡️ AI-Enhanced Safety**: LLM-driven validation with traditional safety checks
 - **📊 Real-time Telemetry**: Live monitoring with intelligent caching
@@ -118,10 +123,14 @@ DroneSphere v3.0 includes a production-ready **Model Context Protocol (MCP)** se
 
 | Tool | Description | Example |
 |------|-------------|---------|
+| `smart_navigate` 🆕 | Unified navigation (all coordinate types) | "fly forward 10m", "go 5m north" |
 | `execute_drone_command` | Natural language drone control | "takeoff to 15m then hover" |
 | `get_drone_status` | Get current telemetry | "what's the battery level?" |
 | `emergency_stop` | Emergency land | "emergency stop" |
 | `health_check` | System diagnostics | Check all connections |
+| `transform_body_to_ned` | Body → NED coordinates | For custom transformations |
+| `transform_ned_to_global` | NED → GPS coordinates | For custom transformations |
+| `transform_global_to_ned` | GPS → NED coordinates | For custom transformations |
 
 ### n8n Integration
 
@@ -148,6 +157,56 @@ make mcp-claude
 # 1. Using mcp-remote proxy (easier)
 # 2. Using SSH tunnel (more secure)
 ```
+
+---
+
+## 🧭 Smart Navigation System (NEW!)
+
+### Overview
+
+DroneSphere v3.0 introduces `smart_navigate` - a unified MCP tool that automatically handles ALL coordinate transformations. AI agents can control drones naturally without understanding coordinate mathematics.
+
+### Coordinate Modes (Auto-Detected)
+
+```python
+# 1. Body Frame (relative to drone heading)
+smart_navigate(forward=10, maintain_altitude=True)    # "fly forward 10m"
+smart_navigate(right=5, maintain_altitude=True)       # "move right 5m"
+
+# 2. Offset from Reference
+smart_navigate(offset_north=10, reference="current")  # "go 10m north"
+smart_navigate(offset_north=20, reference="home")     # "go 20m north from home"
+
+# 3. Absolute GPS
+smart_navigate(latitude=47.398, longitude=8.546, altitude_msl=500)
+
+# 4. NED from Origin
+smart_navigate(north=50, east=30, down=-15)
+```
+
+### Natural Language Examples
+
+| User Says | System Interprets As |
+|-----------|---------------------|
+| "fly 10 meters forward" | `smart_navigate(forward=10, maintain_altitude=True)` |
+| "go 5 meters north" | `smart_navigate(offset_north=5, reference="current")` |
+| "move right 3 meters" | `smart_navigate(right=3, maintain_altitude=True)` |
+| "return home" / "go home" | `execute_drone_command("rtl")` - Uses PX4 native RTL |
+
+### Documentation
+
+- **Complete Guide**: `mcp-server/NAVIGATION_GUIDE.md` - Comprehensive coordinate system documentation
+- **Quick Start**: `QUICKSTART_NAVIGATION.md` - Fast testing guide
+- **Command Reference**: `COMMAND_REFERENCE.md` - All commands with examples
+- **Implementation**: `IMPLEMENTATION_SUMMARY.md` - Technical details
+
+### Benefits for AI Agents
+
+✅ **ONE tool** instead of chaining multiple calls
+✅ **Automatic** coordinate transformation
+✅ **Natural language friendly** - maps directly to user intent
+✅ **Context-aware** - fetches telemetry automatically
+✅ **Robust** - comprehensive validation and error handling
 
 ---
 

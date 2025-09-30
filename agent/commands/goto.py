@@ -49,7 +49,11 @@ class GotoCommand(BaseCommand):
     """
 
     def validate_params(self) -> None:
-        """Validate command parameters for GPS or NED coordinates."""
+        """Validate command parameters for GPS or NED coordinates.
+
+        Note: Body frame and offset coordinates are handled at the MCP layer.
+        The agent only receives GPS or NED coordinates.
+        """
         params = self.params
 
         # Check coordinate system
